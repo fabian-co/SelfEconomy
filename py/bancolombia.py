@@ -38,10 +38,20 @@ def process_extract(file_path):
     current_section = None
     headers = []
     
-    with open(file_path, 'r', encoding='utf-8') as f:
-        reader = csv.reader(f)
-        # Convertimos a lista para facilitar el manejo, aunque para archivos gigantes sería mejor iterador
-        rows = list(reader)
+    # Intentar con diferentes encodificaciones
+    encodings = ['utf-8', 'latin-1', 'cp1252']
+    rows = []
+    
+    for enc in encodings:
+        try:
+            with open(file_path, 'r', encoding=enc) as f:
+                reader = csv.reader(f)
+                rows = list(reader)
+            if rows:
+                break
+        except (UnicodeDecodeError, FileNotFoundError):
+            continue
+
         
     for i, row in enumerate(rows):
         # Saltar filas vacías
@@ -50,13 +60,23 @@ def process_extract(file_path):
         first_cell = row[0].strip()
         
         # 1. Detectar cambio de sección
-        if first_cell in sections:
-            current_section = sections[first_cell]
+        # 1. Detectar cambio de sección (búsqueda parcial para evitar problemas de tildes)
+        found_section = None
+        for marker, key in sections.items():
+            # Limpiamos el marcador de dos puntos y espacios para comparar mejor
+            clean_marker = marker.replace(":", "").strip()
+            if clean_marker in first_cell or first_cell in clean_marker:
+                found_section = key
+                break
+        
+        if found_section:
+            current_section = found_section
             # Usualmente los headers reales están en la siguiente línea
             if i + 1 < len(rows):
                 # Limpiamos headers vacíos
                 headers = [h.strip() for h in rows[i+1] if h.strip()]
             continue
+
             
         # Ignorar líneas que sean repetición de headers o vacías
         if not first_cell or (headers and first_cell == headers[0]):
@@ -115,7 +135,7 @@ def process_extract(file_path):
 
 # Uso del script
 if __name__ == "__main__":
-    archivo_entrada = "Extracto_202512_Cuentas_de ahorro_7666.csv"
+    archivo_entrada = "Extracto/Bancolombia/Extracto_202512_Cuentas_de ahorro_7666.csv"
     try:
         resultado = process_extract(archivo_entrada)
         
