@@ -42,3 +42,6 @@ next-env.d.ts
 
 Extracto/
 *.json
+
+# virtual environment
+venv
