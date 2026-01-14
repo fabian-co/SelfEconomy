@@ -8,7 +8,7 @@ const execAsync = promisify(exec);
 
 export async function POST(request: Request) {
   try {
-    const { filePath } = await request.json();
+    const { filePath, password } = await request.json();
 
     if (!filePath) {
       return NextResponse.json({ error: 'Missing filePath' }, { status: 400 });
@@ -20,15 +20,16 @@ export async function POST(request: Request) {
 
     // Detect bank based on path
     let scriptName = 'bancolombia.py';
-    let outputSubDir = 'bancolombia/process';
 
-    if (filePath.toLowerCase().includes('/nu/') || filePath.toLowerCase().includes('\\nu\\')) {
+    // Normalize path for detection
+    const normalizedPath = filePath.toLowerCase().replace(/\\/g, '/');
+    if (normalizedPath.includes('/nu/') || normalizedPath.startsWith('nu/')) {
       scriptName = 'nu.py';
-      outputSubDir = 'nu/process';
     }
 
     // Script path
     const scriptPath = path.join(process.cwd(), 'app', 'api', 'py', scriptName);
+    const pythonPath = path.join(process.cwd(), 'venv', 'Scripts', 'python.exe');
 
     // Dynamic output name based on input filename
     const fileName = path.basename(filePath, path.extname(filePath));
@@ -38,9 +39,11 @@ export async function POST(request: Request) {
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
 
     // Execute the python script
-    // Note: for NuBank (nu.py), it might need a password. 
-    // For now we assume the user might have provided it or we'll add a way to pass it.
-    let command = `python "${scriptPath}" --input "${sourcePath}" --output "${outputPath}"`;
+    let command = `"${pythonPath}" "${scriptPath}" --input "${sourcePath}" --output "${outputPath}"`;
+
+    if (password) {
+      command += ` --password "${password}"`;
+    }
 
     // Check if filename has a date or similar that might be the password? 
     // Or just generic.

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatCurrency } from "@/lib/utils"; // Reusing for consistent feel, though technically bytes
-import { FileIcon, PencilIcon, TrashIcon, CheckIcon, XIcon, PlayIcon, Loader2Icon, FileJson, FileSpreadsheet } from "lucide-react";
+import { FileIcon, PencilIcon, TrashIcon, CheckIcon, XIcon, PlayIcon, Loader2Icon, FileJson, FileSpreadsheet, FileText } from "lucide-react";
 
 interface FileItemProps {
   name: string;
@@ -10,13 +10,15 @@ interface FileItemProps {
   updatedAt: string;
   onRename: (newName: string) => void;
   onDelete: () => void;
-  onProcess?: () => Promise<void>;
+  onProcess?: (password?: string) => Promise<void>;
 }
 
 export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess }: FileItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(name);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
+  const [password, setPassword] = useState("");
 
   const handleSaveRename = () => {
     if (newName && newName !== name) {
@@ -32,9 +34,18 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess 
 
   const handleProcess = async () => {
     if (!onProcess) return;
+
+    // If it's a PDF and we don't have a password prompt visible yet, show it
+    if (name.toLowerCase().endsWith('.pdf') && !showPasswordPrompt) {
+      setShowPasswordPrompt(true);
+      return;
+    }
+
     setIsProcessing(true);
     try {
-      await onProcess();
+      await onProcess(password);
+      setShowPasswordPrompt(false);
+      setPassword("");
     } finally {
       setIsProcessing(false);
     }
@@ -48,7 +59,7 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess 
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const canProcess = name.toLowerCase().endsWith('.csv') || name.toLowerCase().endsWith('.xlsx');
+  const canProcess = name.toLowerCase().endsWith('.csv') || name.toLowerCase().endsWith('.xlsx') || name.toLowerCase().endsWith('.pdf');
 
   const getFileIcon = () => {
     const ext = name.split('.').pop()?.toLowerCase();
@@ -58,6 +69,8 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess 
       case 'csv':
       case 'xlsx':
         return <FileSpreadsheet className="h-6 w-6 text-emerald-500" />;
+      case 'pdf':
+        return <FileText className="h-6 w-6 text-rose-500" />;
       default:
         return <FileIcon className="h-6 w-6 text-zinc-400" />;
     }
@@ -130,6 +143,33 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess 
           </>
         )}
       </div>
+
+      {showPasswordPrompt && (
+        <div className="absolute inset-0 bg-white/90 dark:bg-zinc-900/90 flex items-center justify-center gap-3 p-4 z-10 animate-in fade-in zoom-in duration-200">
+          <input
+            type="password"
+            placeholder="Contraseña del PDF"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm flex-1 max-w-[200px] shadow-sm"
+            autoFocus
+            onKeyDown={(e) => e.key === 'Enter' && handleProcess()}
+          />
+          <button
+            onClick={handleProcess}
+            disabled={isProcessing}
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg shadow-sm transition-colors flex items-center gap-2"
+          >
+            {isProcessing ? <Loader2Icon className="h-4 w-4 animate-spin" /> : 'Procesar'}
+          </button>
+          <button
+            onClick={() => { setShowPasswordPrompt(false); setPassword(""); }}
+            className="p-2 text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+          >
+            <XIcon className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

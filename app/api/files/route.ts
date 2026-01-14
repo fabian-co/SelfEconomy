@@ -23,7 +23,7 @@ export async function GET() {
     }
 
     const allFiles = await getFilesRecursively(DATA_DIR);
-    const targetExtensions = ['.json', '.csv', '.xlsx'];
+    const targetExtensions = ['.json', '.csv', '.xlsx', '.pdf'];
     const filteredFiles = allFiles.filter(file =>
       targetExtensions.some(ext => file.toLowerCase().endsWith(ext))
     );
@@ -98,12 +98,15 @@ export async function POST(request: Request) {
     const fileName = file.name;
     const extension = path.extname(fileName).toLowerCase();
 
-    if (extension !== '.csv' && extension !== '.xlsx') {
-      return NextResponse.json({ error: 'Only .csv and .xlsx files are allowed' }, { status: 400 });
+    if (extension !== '.csv' && extension !== '.xlsx' && extension !== '.pdf') {
+      return NextResponse.json({ error: 'Only .csv, .xlsx and .pdf files are allowed' }, { status: 400 });
     }
 
-    // Default upload directory for extracts
-    const uploadDir = path.join(DATA_DIR, 'bancolombia', 'scv');
+    // Default upload directory: bancolombia for data, nu for pdfs
+    let uploadDir = path.join(DATA_DIR, 'bancolombia', 'scv');
+    if (extension === '.pdf') {
+      uploadDir = path.join(DATA_DIR, 'nu');
+    }
     await fs.mkdir(uploadDir, { recursive: true });
 
     const filePath = path.join(uploadDir, fileName);

@@ -72,12 +72,12 @@ export default function FilesPage() {
     }
   };
 
-  const handleProcess = async (name: string) => {
+  const handleProcess = async (name: string, password?: string) => {
     try {
       const promise = fetch('/api/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filePath: name }),
+        body: JSON.stringify({ filePath: name, password }),
       }).then(async (res) => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to process');
@@ -104,8 +104,8 @@ export default function FilesPage() {
     if (!file) return;
 
     const extension = file.name.split('.').pop()?.toLowerCase();
-    if (extension !== 'csv' && extension !== 'xlsx') {
-      toast.error("Solo se permiten archivos .csv y .xlsx");
+    if (extension !== 'csv' && extension !== 'xlsx' && extension !== 'pdf') {
+      toast.error("Solo se permiten archivos .csv, .xlsx y .pdf");
       return;
     }
 
@@ -158,7 +158,7 @@ export default function FilesPage() {
               <input
                 type="file"
                 className="hidden"
-                accept=".csv,.xlsx"
+                accept=".csv,.xlsx,.pdf"
                 onChange={handleUpload}
                 disabled={isUploading}
               />
@@ -193,7 +193,7 @@ export default function FilesPage() {
                   updatedAt={file.updatedAt}
                   onRename={(newName) => handleRename(file.name, newName)}
                   onDelete={() => handleDelete(file.name)}
-                  onProcess={() => handleProcess(file.name)}
+                  onProcess={(pwd) => handleProcess(file.name, pwd)}
                 />
               ))
             )}
