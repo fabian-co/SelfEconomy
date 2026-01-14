@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     // Execute the python script
     let command = `"${pythonPath}" "${scriptPath}" --input "${sourcePath}" --output "${outputPath}" --account-type "${accountType}"`;
 
-    if (password) {
+    if (password && scriptName === 'nu.py') {
       command += ` --password "${password}"`;
     }
 
