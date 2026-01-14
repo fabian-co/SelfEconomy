@@ -133,22 +133,48 @@ export function FinancialDashboard({ transactions, metaInfo }: FinancialDashboar
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
+            {/* Global Totals */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="p-4 rounded-2xl bg-zinc-800/50 dark:bg-zinc-900/50">
                 <div className="flex items-center gap-2 mb-2 text-emerald-400">
                   <TrendingUpIcon className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase tracking-wider">Ingresos</span>
+                  <span className="text-xs font-medium uppercase tracking-wider">Ingresos Totales</span>
                 </div>
                 <p className="text-lg font-semibold">{formatCurrency(metaInfo.resumen.total_abonos)}</p>
               </div>
               <div className="p-4 rounded-2xl bg-zinc-800/50 dark:bg-zinc-900/50">
                 <div className="flex items-center gap-2 mb-2 text-rose-400">
                   <TrendingDownIcon className="h-4 w-4" />
-                  <span className="text-xs font-medium uppercase tracking-wider">Egresos</span>
+                  <span className="text-xs font-medium uppercase tracking-wider">Egresos Totales</span>
                 </div>
                 <p className="text-lg font-semibold">{formatCurrency(metaInfo.resumen.total_cargos)}</p>
               </div>
             </div>
+
+            {/* Monthly Totals */}
+            {currentGroup && (
+              <div className="pt-6 border-t border-zinc-700/50">
+                <h3 className="text-sm font-medium text-zinc-400 mb-4 uppercase tracking-wider">
+                  Resumen {currentGroup.monthName}
+                </h3>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="p-4 rounded-2xl bg-zinc-800/50 dark:bg-zinc-900/50">
+                    <div className="flex items-center gap-2 mb-2 text-emerald-400">
+                      <TrendingUpIcon className="h-4 w-4" />
+                      <span className="text-xs font-medium uppercase tracking-wider">Ingresos Mes</span>
+                    </div>
+                    <p className="text-lg font-semibold">{formatCurrency(currentGroup.totalIncome)}</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-zinc-800/50 dark:bg-zinc-900/50">
+                    <div className="flex items-center gap-2 mb-2 text-rose-400">
+                      <TrendingDownIcon className="h-4 w-4" />
+                      <span className="text-xs font-medium uppercase tracking-wider">Egresos Mes</span>
+                    </div>
+                    <p className="text-lg font-semibold">{formatCurrency(Math.abs(currentGroup.totalExpense))}</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
