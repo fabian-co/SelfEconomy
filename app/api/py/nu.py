@@ -9,8 +9,23 @@ from datetime import datetime
 def parse_currency(value):
     if not value:
         return None
-    # Eliminar símbolos de moneda, comas y espacios
-    clean_val = re.sub(r'[^\d.-]', '', value.replace(',', ''))
+    # Eliminar símbolos de moneda y espacios
+    clean_val = value.replace('$', '').replace(' ', '')
+    
+    # Manejar formato colombiano 1.234.567,89 o 50.000,00
+    # Si hay punto y coma, el punto es miles y la coma es decimal
+    if '.' in clean_val and ',' in clean_val:
+        clean_val = clean_val.replace('.', '').replace(',', '.')
+    # Si hay coma y no hay punto, y hay 2 dígitos después de la coma, es decimal
+    elif ',' in clean_val:
+        parts = clean_val.split(',')
+        if len(parts[-1]) <= 2:
+            clean_val = clean_val.replace('.', '').replace(',', '.')
+        else:
+            # Si hay más de 2 dígitos, la coma podría ser de miles (formato US), 
+            # pero en NuBank Colombia suele ser decimal
+            clean_val = clean_val.replace('.', '').replace(',', '.')
+            
     try:
         return float(clean_val)
     except ValueError:
@@ -53,13 +68,22 @@ def process_nu_pdf(file_path, password=None):
             lines = all_text.split('\n')
             for line in lines:
                 # Buscar líneas que parezcan transacciones
-                # Ejemplo: 18 AGO  Compra en...  -50.000
-                # O 18/08/2025  Transferencia...  100.000
-                match = re.search(r'(\d{1,2}\s+[A-Z]{3}|\d{1,2}/\d{1,2}(?:/\d{2,4})?)\s+(.+?)\s+([-+]?\s?[\d.,]+)', line)
+                # Ejemplo complejo: 26/07 Quest N $20.000,00 1 de 1 $20.000,00 1.84% $0,00 $20.000,00
+                # Buscamos: Fecha, luego descripción, luego EL PRIMER valor monetario que encontremos.
+                # Un valor monetario en NuBank suele tener coma para decimales: [\d.]+,\d{2}
+                match = re.search(r'^(\d{1,2}\s+[A-Z]{3}|\d{1,2}/\d{1,2}(?:/\d{2,4})?)\s+(.+?)\s+((\$|[-+])?\s*[\d.]+,\d{2})', line.strip())
+                
                 if match:
                     fecha = match.group(1).strip()
                     desc = match.group(2).strip()
                     valor_str = match.group(3).strip()
+                    
+                    # Ignorar líneas que parecen rangos de fechas o headers (ej. "28 JUN - 28 JUL")
+                    if " - " in line and re.search(r'[A-Z]{3}.* - .*[A-Z]{3}', line):
+                        continue
+                    
+                    # Limpiar descripción si terminó con un símbolo de pesos accidental
+                    desc = desc.rstrip('$').strip()
                     
                     valor = parse_currency(valor_str)
                     if valor is not None:
