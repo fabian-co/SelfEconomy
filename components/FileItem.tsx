@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatCurrency } from "@/lib/utils"; // Reusing for consistent feel, though technically bytes
-import { FileIcon, PencilIcon, TrashIcon, CheckIcon, XIcon, PlayIcon, Loader2Icon } from "lucide-react";
+import { FileIcon, PencilIcon, TrashIcon, CheckIcon, XIcon, PlayIcon, Loader2Icon, FileJson, FileSpreadsheet } from "lucide-react";
 
 interface FileItemProps {
   name: string;
@@ -50,11 +50,24 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess 
 
   const canProcess = name.toLowerCase().endsWith('.csv') || name.toLowerCase().endsWith('.xlsx');
 
+  const getFileIcon = () => {
+    const ext = name.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'json':
+        return <FileJson className="h-6 w-6 text-amber-500" />;
+      case 'csv':
+      case 'xlsx':
+        return <FileSpreadsheet className="h-6 w-6 text-emerald-500" />;
+      default:
+        return <FileIcon className="h-6 w-6 text-zinc-400" />;
+    }
+  };
+
   return (
     <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl hover:shadow-sm transition-all group">
       <div className="flex items-center gap-4 flex-1">
-        <div className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-zinc-500">
-          <FileIcon className="h-6 w-6" />
+        <div className="p-2 bg-zinc-100/50 dark:bg-zinc-800/50 rounded-lg">
+          {getFileIcon()}
         </div>
 
         <div className="flex-1">
