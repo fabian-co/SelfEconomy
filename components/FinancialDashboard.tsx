@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { MonthGroup } from "./MonthGroup";
+import { MonthNavigation } from "./MonthNavigation";
+import { TransactionItem } from "./TransactionItem";
 import { parseTransactionDate, formatCurrency } from "@/lib/utils";
 import { WalletIcon, TrendingUpIcon, TrendingDownIcon } from "lucide-react";
 
@@ -100,6 +102,21 @@ export function FinancialDashboard({ transactions, metaInfo }: FinancialDashboar
     return sortedGroups;
   }, [transactions, metaInfo]);
 
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const currentGroup = groupedTransactions[currentIndex];
+
+  const handlePrev = () => {
+    if (currentIndex < groupedTransactions.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex(prev => prev - 1);
+    }
+  };
+
   return (
     <div className="w-full max-w-2xl mx-auto pb-20">
       {/* Header / Summary Card */}
@@ -132,19 +149,30 @@ export function FinancialDashboard({ transactions, metaInfo }: FinancialDashboar
         </div>
       </div>
 
-      {/* Transactions List */}
-      <div className="space-y-8">
-        {groupedTransactions.map(group => (
-          <MonthGroup
-            key={group.monthKey}
-            monthName={group.monthName}
-            year={group.year}
-            transactions={group.transactions}
-            totalIncome={group.totalIncome}
-            totalExpense={group.totalExpense}
+      {currentGroup && (
+        <>
+          <MonthNavigation
+            currentMonthName={currentGroup.monthName}
+            year={currentGroup.year}
+            onPrev={handlePrev} // Go to older (higher index)
+            onNext={handleNext} // Go to newer (lower index)
+            canGoPrev={currentIndex < groupedTransactions.length - 1}
+            canGoNext={currentIndex > 0}
           />
-        ))}
-      </div>
+
+          {/* Transactions List */}
+          <div className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800 border border-zinc-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-950 overflow-hidden shadow-sm">
+            {currentGroup.transactions.map((tx, index) => (
+              <TransactionItem
+                key={`${tx.fecha}-${index}`}
+                description={tx.descripcion}
+                date={tx.fecha}
+                value={tx.valor}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
