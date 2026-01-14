@@ -18,18 +18,32 @@ export async function POST(request: Request) {
     // The filePath received is relative to app/api/extracto
     const sourcePath = path.join(process.cwd(), 'app', 'api', 'extracto', filePath);
 
-    // Target output path
-    const outputPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'bancolombia', 'process', 'extracto_procesado.json');
+    // Detect bank based on path
+    let scriptName = 'bancolombia.py';
+    let outputSubDir = 'bancolombia/process';
+
+    if (filePath.toLowerCase().includes('/nu/') || filePath.toLowerCase().includes('\\nu\\')) {
+      scriptName = 'nu.py';
+      outputSubDir = 'nu/process';
+    }
 
     // Script path
-    const scriptPath = path.join(process.cwd(), 'app', 'api', 'py', 'bancolombia.py');
+    const scriptPath = path.join(process.cwd(), 'app', 'api', 'py', scriptName);
+
+    // Dynamic output name based on input filename
+    const fileName = path.basename(filePath, path.extname(filePath));
+    const outputPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', `${fileName}.json`);
 
     // Ensure output directory exists
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
 
     // Execute the python script
-    // Using 'python' or 'python3' depending on environment, usually 'python' on Windows
-    const command = `python "${scriptPath}" --input "${sourcePath}" --output "${outputPath}"`;
+    // Note: for NuBank (nu.py), it might need a password. 
+    // For now we assume the user might have provided it or we'll add a way to pass it.
+    let command = `python "${scriptPath}" --input "${sourcePath}" --output "${outputPath}"`;
+
+    // Check if filename has a date or similar that might be the password? 
+    // Or just generic.
 
     const { stdout, stderr } = await execAsync(command);
 
@@ -41,7 +55,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: stdout.trim(),
-      outputPath: 'bancolombia/process/extracto_procesado.json'
+      outputPath: `processed/${fileName}.json`
     });
 
   } catch (error: any) {

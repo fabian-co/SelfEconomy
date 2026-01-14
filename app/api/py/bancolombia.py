@@ -34,6 +34,7 @@ def process_extract(file_path):
     # Estructura base del JSON resultante
     data = {
         "meta_info": {
+            "banco": "Bancolombia",
             "cliente": {},
             "cuenta": {},
             "resumen": {}

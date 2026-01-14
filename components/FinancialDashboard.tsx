@@ -13,6 +13,7 @@ interface Transaction {
   descripcion: string;
   valor: number;
   saldo: number;
+  banco?: string;
 }
 
 interface MetaInfo {
@@ -208,6 +209,7 @@ export function FinancialDashboard({ transactions, metaInfo }: FinancialDashboar
                     description={tx.descripcion}
                     date={tx.fecha}
                     value={tx.valor}
+                    banco={tx.banco}
                   />
                 ))}
               </div>
