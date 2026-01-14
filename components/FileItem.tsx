@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { formatCurrency } from "@/lib/utils"; // Reusing for consistent feel, though technically bytes
-import { FileIcon, PencilIcon, TrashIcon, CheckIcon, XIcon } from "lucide-react";
+import { FileIcon, PencilIcon, TrashIcon, CheckIcon, XIcon, PlayIcon, Loader2Icon } from "lucide-react";
 
 interface FileItemProps {
   name: string;
@@ -10,11 +10,13 @@ interface FileItemProps {
   updatedAt: string;
   onRename: (newName: string) => void;
   onDelete: () => void;
+  onProcess?: () => Promise<void>;
 }
 
-export function FileItem({ name, size, updatedAt, onRename, onDelete }: FileItemProps) {
+export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess }: FileItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(name);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleSaveRename = () => {
     if (newName && newName !== name) {
@@ -28,6 +30,16 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete }: FileItem
     setIsEditing(false);
   };
 
+  const handleProcess = async () => {
+    if (!onProcess) return;
+    setIsProcessing(true);
+    try {
+      await onProcess();
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const formatSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -35,6 +47,8 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete }: FileItem
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
+  const canProcess = name.toLowerCase().endsWith('.csv') || name.toLowerCase().endsWith('.xlsx');
 
   return (
     <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl hover:shadow-sm transition-all group">
@@ -74,6 +88,20 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete }: FileItem
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         {!isEditing && (
           <>
+            {canProcess && onProcess && (
+              <button
+                onClick={handleProcess}
+                disabled={isProcessing}
+                className="p-2 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-lg transition-colors disabled:opacity-50"
+                title="Process file"
+              >
+                {isProcessing ? (
+                  <Loader2Icon className="h-4 w-4 animate-spin" />
+                ) : (
+                  <PlayIcon className="h-4 w-4 fill-current" />
+                )}
+              </button>
+            )}
             <button
               onClick={() => setIsEditing(true)}
               className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
@@ -92,3 +120,4 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete }: FileItem
     </div>
   );
 }
+

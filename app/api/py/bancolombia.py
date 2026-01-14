@@ -2,6 +2,7 @@ import csv
 import json
 import sys
 import os
+import argparse
 
 def parse_currency(value):
     """
@@ -136,21 +137,27 @@ def process_extract(file_path):
 
 # Uso del script
 if __name__ == "__main__":
-    archivo_entrada = "Extracto/Bancolombia/Extracto_202512_Cuentas_de ahorro_7666.csv"
-    output_dir = "Extracto/Bancolombia/procesado_bancolombia"
-    os.makedirs(output_dir, exist_ok=True)
+    parser = argparse.ArgumentParser(description='Procesar extracto de Bancolombia')
+    parser.add_argument('--input', type=str, help='Ruta al archivo CSV de entrada')
+    parser.add_argument('--output', type=str, help='Ruta al archivo JSON de salida')
+    
+    args = parser.parse_args()
+    
+    archivo_entrada = args.input if args.input else "app/api/extracto/bancolombia/scv/Extracto_202512_Cuentas_de ahorro_7666.csv"
+    output_file = args.output if args.output else "app/api/extracto/bancolombia/process/extracto_procesado.json"
+    
+    # Asegurar que el directorio de salida existe
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
     try:
         resultado = process_extract(archivo_entrada)
         
-        # Imprimir JSON resultante
-        print(json.dumps(resultado, ensure_ascii=False, indent=2))
-        
         # Guardar a archivo con ruta especifica
-        output_file = os.path.join(output_dir, "extracto_procesado.json")
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(resultado, f, ensure_ascii=False, indent=2)
-        print(f"Archivo guardado en: {output_file}")
+        
+        print(f"Éxito: Archivo guardado en {output_file}")
             
-    except FileNotFoundError:
-        print(f"Error: No se encontró el archivo {archivo_entrada}")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        sys.exit(1)

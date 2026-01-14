@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { FileItem } from "@/components/FileItem";
 import { Loader2Icon, ArrowLeftIcon, RefreshCwIcon } from "lucide-react";
 import Link from "next/link";
-import { toast } from "sonner"; // Assuming sonner is installed as per package.json
+import { toast } from "sonner";
 
 interface FileData {
   name: string;
@@ -25,7 +25,7 @@ export default function FilesPage() {
       setFiles(data);
     } catch (error) {
       console.error(error);
-      // Fallback or alert
+      toast.error("Error fetching files");
     } finally {
       setIsLoading(false);
     }
@@ -45,11 +45,11 @@ export default function FilesPage() {
 
       if (!res.ok) throw new Error('Failed to rename');
 
-      // Update local state optimistic or redundant fetch
+      toast.success("File renamed");
       fetchFiles();
     } catch (error) {
       console.error(error);
-      alert("Error renaming file");
+      toast.error("Error renaming file");
     }
   };
 
@@ -63,10 +63,37 @@ export default function FilesPage() {
 
       if (!res.ok) throw new Error('Failed to delete');
 
+      toast.success("File deleted");
       fetchFiles();
     } catch (error) {
       console.error(error);
-      alert("Error deleting file");
+      toast.error("Error deleting file");
+    }
+  };
+
+  const handleProcess = async (name: string) => {
+    const promise = fetch('/api/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ filePath: name }),
+    }).then(async (res) => {
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to process');
+      return data;
+    });
+
+    toast.promise(promise, {
+      loading: 'Processing file...',
+      success: (data) => `File processed successfully!`,
+      error: (err) => `Error: ${err.message}`,
+    });
+
+    try {
+      await promise;
+      // Refresh file list to see the new JSON if created
+      fetchFiles();
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -99,7 +126,7 @@ export default function FilesPage() {
           <div className="space-y-4">
             {files.length === 0 ? (
               <div className="text-center py-20 text-zinc-400 bg-zinc-100/50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800">
-                No JSON files found
+                No files found
               </div>
             ) : (
               files.map(file => (
@@ -110,6 +137,7 @@ export default function FilesPage() {
                   updatedAt={file.updatedAt}
                   onRename={(newName) => handleRename(file.name, newName)}
                   onDelete={() => handleDelete(file.name)}
+                  onProcess={() => handleProcess(file.name)}
                 />
               ))
             )}
@@ -119,3 +147,4 @@ export default function FilesPage() {
     </div>
   );
 }
+

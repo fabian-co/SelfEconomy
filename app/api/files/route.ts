@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-const DATA_DIR = path.join(process.cwd(), 'Extracto');
+const DATA_DIR = path.join(process.cwd(), 'app', 'api', 'extracto');
 
 async function getFilesRecursively(dir: string): Promise<string[]> {
   const dirents = await fs.readdir(dir, { withFileTypes: true });
@@ -23,9 +23,12 @@ export async function GET() {
     }
 
     const allFiles = await getFilesRecursively(DATA_DIR);
-    const jsonFiles = allFiles.filter(file => file.endsWith('.json'));
+    const targetExtensions = ['.json', '.csv', '.xlsx'];
+    const filteredFiles = allFiles.filter(file =>
+      targetExtensions.some(ext => file.toLowerCase().endsWith(ext))
+    );
 
-    const fileStats = await Promise.all(jsonFiles.map(async (filePath) => {
+    const fileStats = await Promise.all(filteredFiles.map(async (filePath) => {
       const stats = await fs.stat(filePath);
       // Return relative path from DATA_DIR
       const relativePath = path.relative(DATA_DIR, filePath).split(path.sep).join('/');
@@ -51,15 +54,8 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Missing filenames' }, { status: 400 });
     }
 
-    if (!newName.endsWith('.json')) {
-      return NextResponse.json({ error: 'File must be a JSON file' }, { status: 400 });
-    }
-
     const oldPath = path.join(DATA_DIR, oldName);
     const newPath = path.join(DATA_DIR, newName);
-
-    // Verify paths are within DATA_DIR to prevent directory traversal?
-    // For now, allow renaming within the structure.
 
     await fs.rename(oldPath, newPath);
 
@@ -88,3 +84,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Failed to delete file' }, { status: 500 });
   }
 }
+
