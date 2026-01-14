@@ -118,61 +118,67 @@ export function FinancialDashboard({ transactions, metaInfo }: FinancialDashboar
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto pb-20">
-      {/* Header / Summary Card */}
-      <div className="mb-8 p-6 rounded-3xl bg-zinc-900 text-white shadow-xl dark:bg-zinc-800 dark:border dark:border-zinc-700">
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <p className="text-zinc-400 text-sm font-medium mb-1">Saldo Actual</p>
-            <h1 className="text-4xl font-bold tracking-tight">{formatCurrency(metaInfo.resumen.saldo_actual)}</h1>
-          </div>
-          <div className="p-3 bg-zinc-800 rounded-2xl dark:bg-zinc-950/50">
-            <WalletIcon className="h-6 w-6 text-emerald-400" />
+    <div className="w-full max-w-5xl mx-auto pb-20">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Column: Summary Card */}
+        <div className="lg:col-span-5 lg:sticky lg:top-8">
+          <div className="p-6 rounded-3xl bg-zinc-900 text-white shadow-xl dark:bg-zinc-800 dark:border dark:border-zinc-700">
+            <div className="flex items-start justify-between mb-8">
+              <div>
+                <p className="text-zinc-400 text-sm font-medium mb-1">Saldo Actual</p>
+                <h1 className="text-4xl font-bold tracking-tight">{formatCurrency(metaInfo.resumen.saldo_actual)}</h1>
+              </div>
+              <div className="p-3 bg-zinc-800 rounded-2xl dark:bg-zinc-950/50">
+                <WalletIcon className="h-6 w-6 text-emerald-400" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+              <div className="p-4 rounded-2xl bg-zinc-800/50 dark:bg-zinc-900/50">
+                <div className="flex items-center gap-2 mb-2 text-emerald-400">
+                  <TrendingUpIcon className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase tracking-wider">Ingresos</span>
+                </div>
+                <p className="text-lg font-semibold">{formatCurrency(metaInfo.resumen.total_abonos)}</p>
+              </div>
+              <div className="p-4 rounded-2xl bg-zinc-800/50 dark:bg-zinc-900/50">
+                <div className="flex items-center gap-2 mb-2 text-rose-400">
+                  <TrendingDownIcon className="h-4 w-4" />
+                  <span className="text-xs font-medium uppercase tracking-wider">Egresos</span>
+                </div>
+                <p className="text-lg font-semibold">{formatCurrency(metaInfo.resumen.total_cargos)}</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 rounded-2xl bg-zinc-800/50 dark:bg-zinc-900/50">
-            <div className="flex items-center gap-2 mb-2 text-emerald-400">
-              <TrendingUpIcon className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase tracking-wider">Ingresos</span>
-            </div>
-            <p className="text-lg font-semibold">{formatCurrency(metaInfo.resumen.total_abonos)}</p>
-          </div>
-          <div className="p-4 rounded-2xl bg-zinc-800/50 dark:bg-zinc-900/50">
-            <div className="flex items-center gap-2 mb-2 text-rose-400">
-              <TrendingDownIcon className="h-4 w-4" />
-              <span className="text-xs font-medium uppercase tracking-wider">Egresos</span>
-            </div>
-            <p className="text-lg font-semibold">{formatCurrency(metaInfo.resumen.total_cargos)}</p>
-          </div>
+        {/* Right Column: Transactions */}
+        <div className="lg:col-span-7 space-y-6">
+          {currentGroup && (
+            <>
+              <MonthNavigation
+                currentMonthName={currentGroup.monthName}
+                year={currentGroup.year}
+                onPrev={handlePrev}
+                onNext={handleNext}
+                canGoPrev={currentIndex < groupedTransactions.length - 1}
+                canGoNext={currentIndex > 0}
+              />
+
+              <div className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800 border border-zinc-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-950 overflow-hidden shadow-sm">
+                {currentGroup.transactions.map((tx, index) => (
+                  <TransactionItem
+                    key={`${tx.fecha}-${index}`}
+                    description={tx.descripcion}
+                    date={tx.fecha}
+                    value={tx.valor}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
-
-      {currentGroup && (
-        <>
-          <MonthNavigation
-            currentMonthName={currentGroup.monthName}
-            year={currentGroup.year}
-            onPrev={handlePrev} // Go to older (higher index)
-            onNext={handleNext} // Go to newer (lower index)
-            canGoPrev={currentIndex < groupedTransactions.length - 1}
-            canGoNext={currentIndex > 0}
-          />
-
-          {/* Transactions List */}
-          <div className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800 border border-zinc-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-950 overflow-hidden shadow-sm">
-            {currentGroup.transactions.map((tx, index) => (
-              <TransactionItem
-                key={`${tx.fecha}-${index}`}
-                description={tx.descripcion}
-                date={tx.fecha}
-                value={tx.valor}
-              />
-            ))}
-          </div>
-        </>
-      )}
     </div>
   );
 }
