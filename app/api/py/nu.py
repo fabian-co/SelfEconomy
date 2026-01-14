@@ -99,6 +99,18 @@ def process_nu_pdf(file_path, password=None):
                                 fecha = f"{fecha.split()[0]}/{m_num}"
                                 break
 
+                        # Por defecto, en NuBank Tarjeta de Crédito todo es un cargo (negativo)
+                        # Excepto si la descripción indica un pago/abono
+                        # Usamos "gracias por tu" para ser más robustos (a veces "pago" queda en otra columna)
+                        is_payment = "gracias por tu" in desc.lower()
+                       
+                        if not is_payment:
+                            # Asegurar que sea negativo si no es un pago
+                            valor = -abs(valor)
+                        else:
+                            # Asegurar que sea positivo si es un pago
+                            valor = abs(valor)
+
                         data["transacciones"].append({
                             "fecha": fecha,
                             "descripcion": desc,
