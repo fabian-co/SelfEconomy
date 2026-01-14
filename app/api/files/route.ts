@@ -85,3 +85,34 @@ export async function DELETE(request: Request) {
   }
 }
 
+export async function POST(request: Request) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+
+    if (!file) {
+      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const fileName = file.name;
+    const extension = path.extname(fileName).toLowerCase();
+
+    if (extension !== '.csv' && extension !== '.xlsx') {
+      return NextResponse.json({ error: 'Only .csv and .xlsx files are allowed' }, { status: 400 });
+    }
+
+    // Default upload directory for extracts
+    const uploadDir = path.join(DATA_DIR, 'bancolombia', 'scv');
+    await fs.mkdir(uploadDir, { recursive: true });
+
+    const filePath = path.join(uploadDir, fileName);
+    await fs.writeFile(filePath, buffer);
+
+    return NextResponse.json({ success: true, name: fileName });
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });
+  }
+}
+

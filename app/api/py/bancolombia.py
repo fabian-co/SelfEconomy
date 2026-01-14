@@ -3,6 +3,7 @@ import json
 import sys
 import os
 import argparse
+import pandas as pd
 
 def parse_currency(value):
     """
@@ -17,6 +18,17 @@ def parse_currency(value):
         return float(clean_val)
     except ValueError:
         return None
+
+def convert_xlsx_to_csv(xlsx_path, csv_path):
+    """
+    Convierte un archivo XLSX a CSV usando pandas.
+    """
+    try:
+        df = pd.read_excel(xlsx_path)
+        df.to_csv(csv_path, index=False, encoding='utf-8')
+        return csv_path
+    except Exception as e:
+        raise Exception(f"Error al convertir XLSX a CSV: {str(e)}")
 
 def process_extract(file_path):
     # Estructura base del JSON resultante
@@ -146,6 +158,16 @@ if __name__ == "__main__":
     archivo_entrada = args.input if args.input else "app/api/extracto/bancolombia/scv/Extracto_202512_Cuentas_de ahorro_7666.csv"
     output_file = args.output if args.output else "app/api/extracto/bancolombia/process/extracto_procesado.json"
     
+    # Manejar archivos XLSX
+    if archivo_entrada.lower().endswith('.xlsx'):
+        csv_convertido = archivo_entrada.rsplit('.', 1)[0] + ".converted.csv"
+        print(f"Detectado archivo Excel. Convirtiendo a CSV: {csv_convertido}")
+        try:
+            archivo_entrada = convert_xlsx_to_csv(archivo_entrada, csv_convertido)
+        except Exception as e:
+            print(f"Error en la conversión: {str(e)}")
+            sys.exit(1)
+
     # Asegurar que el directorio de salida existe
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     

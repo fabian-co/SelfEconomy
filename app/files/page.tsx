@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { FileItem } from "@/components/FileItem";
-import { Loader2Icon, ArrowLeftIcon, RefreshCwIcon } from "lucide-react";
+import { Loader2Icon, ArrowLeftIcon, RefreshCwIcon, UploadIcon } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -15,6 +15,7 @@ interface FileData {
 export default function FilesPage() {
   const [files, setFiles] = useState<FileData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
 
   const fetchFiles = async () => {
     setIsLoading(true);
@@ -72,28 +73,66 @@ export default function FilesPage() {
   };
 
   const handleProcess = async (name: string) => {
-    const promise = fetch('/api/process', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ filePath: name }),
-    }).then(async (res) => {
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to process');
-      return data;
-    });
-
-    toast.promise(promise, {
-      loading: 'Processing file...',
-      success: (data) => `File processed successfully!`,
-      error: (err) => `Error: ${err.message}`,
-    });
-
     try {
+      const promise = fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filePath: name }),
+      }).then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to process');
+        return data;
+      });
+
+      toast.promise(promise, {
+        loading: 'Processing file...',
+        success: (data) => `File processed successfully!`,
+        error: (err) => `Error: ${err.message}`,
+      });
+
       await promise;
       // Refresh file list to see the new JSON if created
       fetchFiles();
+
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    if (extension !== 'csv' && extension !== 'xlsx') {
+      toast.error("Solo se permiten archivos .csv y .xlsx");
+      return;
+    }
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/api/files', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Error al subir el archivo');
+      }
+
+      toast.success("Archivo subido con éxito");
+      fetchFiles();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message);
+    } finally {
+      setIsUploading(false);
+      // Reset input
+      e.target.value = '';
     }
   };
 
@@ -108,13 +147,30 @@ export default function FilesPage() {
             </Link>
             <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-100">Files Data</h1>
           </div>
-          <button
-            onClick={fetchFiles}
-            className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
-            title="Refresh"
-          >
-            <RefreshCwIcon className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-          </button>
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl cursor-pointer transition-colors text-sm font-medium">
+              {isUploading ? (
+                <Loader2Icon className="h-4 w-4 animate-spin" />
+              ) : (
+                <UploadIcon className="h-4 w-4" />
+              )}
+              {isUploading ? 'Uploading...' : 'Upload File'}
+              <input
+                type="file"
+                className="hidden"
+                accept=".csv,.xlsx"
+                onChange={handleUpload}
+                disabled={isUploading}
+              />
+            </label>
+            <button
+              onClick={fetchFiles}
+              className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200"
+              title="Refresh"
+            >
+              <RefreshCwIcon className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
