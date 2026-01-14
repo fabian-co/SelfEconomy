@@ -1,5 +1,5 @@
 import { FinancialDashboard } from "@/components/FinancialDashboard";
-import data from "../extracto_procesado.json";
+import data from "../Extracto/Bancolombia/procesado_bancolombia/extracto_procesado.json";
 
 export default function Home() {
   return (

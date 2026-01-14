@@ -5,7 +5,8 @@ import { MonthGroup } from "./MonthGroup";
 import { MonthNavigation } from "./MonthNavigation";
 import { TransactionItem } from "./TransactionItem";
 import { parseTransactionDate, formatCurrency } from "@/lib/utils";
-import { WalletIcon, TrendingUpIcon, TrendingDownIcon } from "lucide-react";
+import { WalletIcon, TrendingUpIcon, TrendingDownIcon, FolderIcon } from "lucide-react";
+import Link from "next/link";
 
 interface Transaction {
   fecha: string;
@@ -128,8 +129,17 @@ export function FinancialDashboard({ transactions, metaInfo }: FinancialDashboar
                 <p className="text-zinc-400 text-sm font-medium mb-1">Saldo Actual</p>
                 <h1 className="text-4xl font-bold tracking-tight">{formatCurrency(metaInfo.resumen.saldo_actual)}</h1>
               </div>
-              <div className="p-3 bg-zinc-800 rounded-2xl dark:bg-zinc-950/50">
-                <WalletIcon className="h-6 w-6 text-emerald-400" />
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/files"
+                  className="p-3 bg-zinc-800 rounded-2xl dark:bg-zinc-950/50 hover:bg-zinc-700 dark:hover:bg-zinc-900 transition-colors group"
+                  title="Manage Files"
+                >
+                  <FolderIcon className="h-6 w-6 text-zinc-400 group-hover:text-white transition-colors" />
+                </Link>
+                <div className="p-3 bg-zinc-800 rounded-2xl dark:bg-zinc-950/50">
+                  <WalletIcon className="h-6 w-6 text-emerald-400" />
+                </div>
               </div>
             </div>
 
