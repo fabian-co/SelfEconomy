@@ -1,6 +1,7 @@
 import csv
 import json
 import sys
+import os
 
 def parse_currency(value):
     """
@@ -136,15 +137,20 @@ def process_extract(file_path):
 # Uso del script
 if __name__ == "__main__":
     archivo_entrada = "Extracto/Bancolombia/Extracto_202512_Cuentas_de ahorro_7666.csv"
+    output_dir = "Extracto/Bancolombia/procesado_bancolombia"
+    os.makedirs(output_dir, exist_ok=True)
+    
     try:
         resultado = process_extract(archivo_entrada)
         
         # Imprimir JSON resultante
         print(json.dumps(resultado, ensure_ascii=False, indent=2))
         
-        # Opcional: Guardar a archivo
-        with open("extracto_procesado.json", "w", encoding="utf-8") as f:
+        # Guardar a archivo con ruta especifica
+        output_file = os.path.join(output_dir, "extracto_procesado.json")
+        with open(output_file, "w", encoding="utf-8") as f:
             json.dump(resultado, f, ensure_ascii=False, indent=2)
+        print(f"Archivo guardado en: {output_file}")
             
     except FileNotFoundError:
         print(f"Error: No se encontró el archivo {archivo_entrada}")
