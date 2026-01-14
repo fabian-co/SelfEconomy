@@ -18,13 +18,19 @@ export async function POST(request: Request) {
     // The filePath received is relative to app/api/extracto
     const sourcePath = path.join(process.cwd(), 'app', 'api', 'extracto', filePath);
 
-    // Detect bank based on path
-    let scriptName = 'bancolombia.py';
-
-    // Normalize path for detection
+    // Detect bank and account type based on path
     const normalizedPath = filePath.toLowerCase().replace(/\\/g, '/');
-    if (normalizedPath.includes('/nu/') || normalizedPath.startsWith('nu/')) {
+    const pathParts = normalizedPath.split('/');
+
+    // Structure: [bank]/[accountType]/filename.ext
+    const bank = pathParts[0];
+    const accountType = pathParts[1] || 'debit';
+
+    let scriptName = 'bancolombia.py';
+    if (bank === 'nu') {
       scriptName = 'nu.py';
+    } else if (bank === 'bancolombia') {
+      scriptName = 'bancolombia.py';
     }
 
     // Script path
@@ -39,7 +45,7 @@ export async function POST(request: Request) {
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
 
     // Execute the python script
-    let command = `"${pythonPath}" "${scriptPath}" --input "${sourcePath}" --output "${outputPath}"`;
+    let command = `"${pythonPath}" "${scriptPath}" --input "${sourcePath}" --output "${outputPath}" --account-type "${accountType}"`;
 
     if (password) {
       command += ` --password "${password}"`;

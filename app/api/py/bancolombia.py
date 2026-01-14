@@ -30,11 +30,12 @@ def convert_xlsx_to_csv(xlsx_path, csv_path):
     except Exception as e:
         raise Exception(f"Error al convertir XLSX a CSV: {str(e)}")
 
-def process_extract(file_path):
+def process_extract(file_path, account_type='debit'):
     # Estructura base del JSON resultante
     data = {
         "meta_info": {
             "banco": "Bancolombia",
+            "tipo_cuenta": account_type,
             "cliente": {},
             "cuenta": {},
             "resumen": {}
@@ -153,6 +154,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Procesar extracto de Bancolombia')
     parser.add_argument('--input', type=str, help='Ruta al archivo CSV de entrada')
     parser.add_argument('--output', type=str, help='Ruta al archivo JSON de salida')
+    parser.add_argument('--account-type', type=str, default='debit', help='Tipo de cuenta (debit/credit)')
     
     args = parser.parse_args()
     
@@ -168,12 +170,12 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Error en la conversión: {str(e)}")
             sys.exit(1)
-
+ 
     # Asegurar que el directorio de salida existe
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
     try:
-        resultado = process_extract(archivo_entrada)
+        resultado = process_extract(archivo_entrada, args.account_type)
         
         # Guardar a archivo con ruta especifica
         with open(output_file, "w", encoding="utf-8") as f:

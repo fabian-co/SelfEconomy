@@ -89,30 +89,37 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const bank = formData.get('bank') as string || 'other';
+    const accountType = formData.get('accountType') as string || 'default';
+    const extractName = formData.get('extractName') as string;
 
     if (!file) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const fileName = file.name;
-    const extension = path.extname(fileName).toLowerCase();
+    const originalName = file.name;
+    const extension = path.extname(originalName).toLowerCase();
 
     if (extension !== '.csv' && extension !== '.xlsx' && extension !== '.pdf') {
       return NextResponse.json({ error: 'Only .csv, .xlsx and .pdf files are allowed' }, { status: 400 });
     }
 
-    // Default upload directory: bancolombia for data, nu for pdfs
-    let uploadDir = path.join(DATA_DIR, 'bancolombia', 'scv');
-    if (extension === '.pdf') {
-      uploadDir = path.join(DATA_DIR, 'nu');
-    }
+    // Use extractName if provided, otherwise originalName
+    const finalFileName = extractName ? `${extractName}${extension}` : originalName;
+
+    // Organize by bank and accountType
+    const uploadDir = path.join(DATA_DIR, bank.toLowerCase(), accountType.toLowerCase());
     await fs.mkdir(uploadDir, { recursive: true });
 
-    const filePath = path.join(uploadDir, fileName);
+    const filePath = path.join(uploadDir, finalFileName);
     await fs.writeFile(filePath, buffer);
 
-    return NextResponse.json({ success: true, name: fileName });
+    return NextResponse.json({
+      success: true,
+      name: finalFileName,
+      path: path.relative(DATA_DIR, filePath).split(path.sep).join('/')
+    });
   } catch (error) {
     console.error("Error uploading file:", error);
     return NextResponse.json({ error: 'Failed to upload file' }, { status: 500 });

@@ -31,10 +31,11 @@ def parse_currency(value):
     except ValueError:
         return None
 
-def process_nu_pdf(file_path, password=None):
+def process_nu_pdf(file_path, password=None, account_type='debit'):
     data = {
         "meta_info": {
             "banco": "NuBank",
+            "tipo_cuenta": account_type,
             "cliente": {},
             "cuenta": {},
             "resumen": {
@@ -137,11 +138,12 @@ if __name__ == "__main__":
     parser.add_argument('--input', type=str, required=True, help='Ruta al archivo PDF')
     parser.add_argument('--output', type=str, required=True, help='Ruta al archivo JSON de salida')
     parser.add_argument('--password', type=str, help='Contraseña del PDF')
+    parser.add_argument('--account-type', type=str, default='debit', help='Tipo de cuenta (debit/credit)')
     
     args = parser.parse_args()
     
     try:
-        resultado = process_nu_pdf(args.input, args.password)
+        resultado = process_nu_pdf(args.input, args.password, args.account_type)
         
         os.makedirs(os.path.dirname(args.output), exist_ok=True)
         with open(args.output, "w", encoding="utf-8") as f:
