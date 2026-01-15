@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileItem } from "@/components/FileItem";
-import { UploadForm } from "@/components/UploadForm";
-import { EditFileModal } from "@/components/EditFileModal";
+import { FileItem } from "./components/FileItem";
+import { UploadForm } from "./components/UploadForm";
+import { EditFileModal } from "./components/EditFileModal";
 import { Loader2Icon, ArrowLeftIcon, RefreshCwIcon, UploadIcon } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";

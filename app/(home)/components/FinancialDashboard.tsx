@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { parseTransactionDate } from "@/lib/utils";
-import { Transaction, MetaInfo, GroupedTransaction } from "./dashboard-types";
+import { Transaction, MetaInfo, GroupedTransaction } from "../types/index";
 import { SummaryCard } from "./SummaryCard";
 import { TransactionList } from "./TransactionList";
 

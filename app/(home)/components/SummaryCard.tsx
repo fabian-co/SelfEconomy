@@ -3,7 +3,7 @@
 import { FolderIcon, TrendingDownIcon, TrendingUpIcon, WalletIcon } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
-import { MetaInfo, GroupedTransaction } from "./dashboard-types";
+import { MetaInfo, GroupedTransaction } from "../types/index";
 
 interface SummaryCardProps {
   metaInfo: MetaInfo;

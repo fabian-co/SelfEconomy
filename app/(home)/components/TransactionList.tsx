@@ -2,7 +2,7 @@
 
 import { MonthNavigation } from "./MonthNavigation";
 import { TransactionItem } from "./TransactionItem";
-import { GroupedTransaction } from "./dashboard-types";
+import { GroupedTransaction } from "../types/index";
 
 interface TransactionListProps {
   currentGroup?: GroupedTransaction;

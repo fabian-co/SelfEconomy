@@ -1,4 +1,4 @@
-import { FinancialDashboard } from "@/components/FinancialDashboard";
+import { FinancialDashboard } from "./components/FinancialDashboard";
 import fs from "fs";
 import path from "path";
 
