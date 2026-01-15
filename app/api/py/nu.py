@@ -134,13 +134,15 @@ def process_nu_pdf(file_path, password=None, account_type='debit', analyze_only=
                             "fecha": fecha,
                             "descripcion": desc,
                             "valor": valor,
-                            "saldo": 0
+                            "saldo": 0,
+                            "ignored": is_payment
                         })
                         
-                        if valor > 0:
-                            data["meta_info"]["resumen"]["total_abonos"] += valor
-                        else:
-                            data["meta_info"]["resumen"]["total_cargos"] += abs(valor)
+                        if not is_payment:
+                            if valor > 0:
+                                data["meta_info"]["resumen"]["total_abonos"] += valor
+                            else:
+                                data["meta_info"]["resumen"]["total_cargos"] += abs(valor)
 
             data["meta_info"]["resumen"]["saldo_actual"] = data["meta_info"]["resumen"]["total_abonos"] - data["meta_info"]["resumen"]["total_cargos"]
 

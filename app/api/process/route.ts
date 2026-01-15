@@ -85,16 +85,18 @@ export async function POST(request: Request) {
         data.transacciones = data.transacciones.map((t: any) => {
           // NuBank Logic
           if (!isBancolombia) {
-            const isPayment = (paymentKeywords || []).some((k: string) =>
+            const isIgnored = (paymentKeywords || []).some((k: string) =>
               t.descripcion.toLowerCase().includes(k.toLowerCase())
             );
             const absVal = Math.abs(t.valor);
-            const newVal = isPayment ? absVal : -absVal;
+            const newVal = isIgnored ? absVal : -absVal;
 
-            if (newVal > 0) totalAbonos += newVal;
-            else totalCargos += Math.abs(newVal);
+            if (!isIgnored) {
+              if (newVal > 0) totalAbonos += newVal;
+              else totalCargos += Math.abs(newVal);
+            }
 
-            return { ...t, valor: newVal };
+            return { ...t, valor: newVal, ignored: isIgnored };
           } else {
             // Bancolombia Logic
             // Only sum if NOT ignored
@@ -126,7 +128,7 @@ export async function POST(request: Request) {
 
     // Dynamic output name based on input filename
     const fileName = path.basename(filePath, path.extname(filePath));
-    const outputPath = path.join(path.dirname(sourcePath), `${outputName || fileName}.json`);
+    const outputPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', `${outputName || fileName}.json`);
 
     // Ensure output directory exists
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
