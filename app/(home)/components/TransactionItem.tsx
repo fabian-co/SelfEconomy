@@ -17,9 +17,9 @@ export function TransactionItem({ description, date, value, banco, accountType, 
   const formattedAccountType = accountType === 'credit' ? 'Crédito' : 'Débito';
 
   return (
-    <div className={`group flex items-center justify-between p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 rounded-xl transition-colors ${ignored ? 'opacity-50 grayscale' : ''}`}>
-      <div className="flex items-center gap-4">
-        <div className="relative">
+    <div id="transaction-item-root" className={`group flex items-center justify-between p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 rounded-xl transition-colors ${ignored ? 'opacity-50 grayscale' : ''}`}>
+      <div id="transaction-item-content" className="flex items-center gap-4">
+        <div id="transaction-item-icon-container" className="relative">
           <div className={`
             flex h-10 w-10 items-center justify-center rounded-full 
             ${isIncome ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-500' : 'bg-rose-100 text-rose-600 dark:bg-rose-950/30 dark:text-rose-500'}
@@ -34,7 +34,7 @@ export function TransactionItem({ description, date, value, banco, accountType, 
             {isNuBank ? 'N' : 'B'}
           </div>
         </div>
-        <div className="flex flex-col gap-1">
+        <div id="transaction-item-info" className="flex flex-col gap-1">
           <span className={`font-medium text-zinc-900 dark:text-zinc-100 line-clamp-1 ${ignored ? 'line-through decoration-zinc-400' : ''}`}>
             {ignored && <span className="text-xs italic text-zinc-500 mr-2">[Ignorado]</span>}
             {description}
@@ -47,7 +47,7 @@ export function TransactionItem({ description, date, value, banco, accountType, 
           </div>
         </div>
       </div>
-      <div className={`font-semibold ${ignored ? 'text-zinc-400 line-through' : (isIncome ? 'text-emerald-600 dark:text-emerald-500' : 'text-zinc-900 dark:text-zinc-100')}`}>
+      <div id="transaction-item-value" className={`font-semibold ${ignored ? 'text-zinc-400 line-through' : (isIncome ? 'text-emerald-600 dark:text-emerald-500' : 'text-zinc-900 dark:text-zinc-100')}`}>
         {isIncome ? '+' : ''}{formatCurrency(value)}
       </div>
     </div>

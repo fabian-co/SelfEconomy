@@ -88,13 +88,13 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess,
   };
 
   return (
-    <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl hover:shadow-sm transition-all group">
+    <div id="file-item-root" className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-xl hover:shadow-sm transition-all group">
       <div className="flex items-center gap-4 flex-1">
-        <div className="p-2 bg-zinc-100/50 dark:bg-zinc-800/50 rounded-lg">
+        <div id="file-item-icon-container" className="p-2 bg-zinc-100/50 dark:bg-zinc-800/50 rounded-lg">
           {getFileIcon()}
         </div>
 
-        <div className="flex-1">
+        <div id="file-item-details" className="flex-1">
           {isEditing ? (
             <div className="flex items-center gap-2">
               <input
@@ -114,7 +114,7 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess,
           ) : (
             <h3 className="font-medium text-zinc-900 dark:text-zinc-100">{name}</h3>
           )}
-          <div className="flex items-center gap-2 text-xs text-zinc-500 mt-1">
+          <div id="file-item-size-details" className="flex items-center gap-2 text-xs text-zinc-500 mt-1">
             <span>{formatSize(size)}</span>
             <span>•</span>
             <span>{new Date(updatedAt).toLocaleDateString()}</span>
@@ -122,7 +122,7 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess,
         </div>
       </div>
 
-      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div id="file-item-actions" className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
         {!isEditing && (
           <>
             {canProcess && onProcess && (
@@ -157,7 +157,7 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess,
       </div>
 
       {showPasswordPrompt && (
-        <div className="absolute inset-0 bg-white/90 dark:bg-zinc-900/90 flex items-center justify-center gap-3 p-4 z-10 animate-in fade-in zoom-in duration-200">
+        <div id="file-item-password-prompt" className="absolute inset-0 bg-white/90 dark:bg-zinc-900/90 flex items-center justify-center gap-3 p-4 z-10 animate-in fade-in zoom-in duration-200">
           <input
             type="password"
             placeholder="Contraseña del PDF"
