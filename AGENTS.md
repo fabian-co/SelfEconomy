@@ -4,7 +4,7 @@ Este documento describe la arquitectura basada en "Agentes" que utiliza el proye
 
 ## Visión General
 
-El sistema utiliza un enfoque híbrido donde una aplicación **Next.js** actúa como el orquestador principal, delegando tareas pesadas de procesamiento de datos a scripts de **Python** especializados (los "Agentes").
+El sistema utiliza un enfoque híbrido donde una aplicación **Next.js 16** actúa como el orquestador principal, delegando tareas pesadas de procesamiento de datos a scripts de **Python** especializados (los "Agentes").
 
 ```mermaid
 graph TD
@@ -87,6 +87,7 @@ La interfaz de usuario está construida utilizando **shadcn/ui**, lo que proporc
 
 - **Ubicación:** Los componentes de la UI se encuentran en el directorio `components/`.
 - **Uso:** Se debe priorizar el uso de estos componentes predefinidos para mantener la consistencia visual en toda la aplicación.
+- **Skills Next.js 16:** Consulta [SKILLS.md](skills/nextjs/SKILLS.md) para ver las nuevas características y buenas prácticas de Next.js 16.
 
 ## Flujo de Trabajo para Agregar Nuevos Agentes
 
