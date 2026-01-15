@@ -22,6 +22,7 @@ const uploadSchema = z.object({
   password: z.string().optional(),
   file: z.instanceof(File, { message: "El archivo es obligatorio" }),
 }).refine((data) => {
+  // Validate password for NuBank
   if (data.bank === "nu" && !data.password) {
     return false;
   }
@@ -29,6 +30,23 @@ const uploadSchema = z.object({
 }, {
   message: "La contraseña es obligatoria para NuBank",
   path: ["password"],
+}).refine((data) => {
+  // Validate accountType based on bank
+  if (data.bank === "bancolombia" && data.accountType !== "debit") return false;
+  if (data.bank === "nu" && data.accountType !== "credit") return false;
+  return true;
+}, {
+  message: "Tipo de cuenta no válido para este banco",
+  path: ["accountType"],
+}).refine((data) => {
+  // Validate file extension based on bank
+  const ext = data.file.name.toLowerCase().split('.').pop();
+  if (data.bank === "nu") return ext === "pdf";
+  if (data.bank === "bancolombia") return ext === "csv" || ext === "xlsx";
+  return true;
+}, {
+  message: "Formato de archivo no válido para este banco",
+  path: ["file"],
 });
 
 type UploadFormValues = z.infer<typeof uploadSchema>;
@@ -226,8 +244,13 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
               <div className="grid gap-2">
                 <Label>Banco <span className="text-rose-500">*</span></Label>
                 <Select
-                  value={watch("bank")}
-                  onValueChange={(val) => setValue("bank", val as any, { shouldValidate: true })}
+                  value={selectedBank}
+                  onValueChange={(val) => {
+                    setValue("bank", val, { shouldValidate: true });
+                    // Auto-set valid account type
+                    if (val === "bancolombia") setValue("accountType", "debit", { shouldValidate: true });
+                    if (val === "nu") setValue("accountType", "credit", { shouldValidate: true });
+                  }}
                 >
                   <SelectTrigger className="rounded-xl">
                     <SelectValue placeholder="Selecciona Banco" />
@@ -242,15 +265,22 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
               <div className="grid gap-2">
                 <Label>Tipo de Cuenta <span className="text-rose-500">*</span></Label>
                 <Select
-                  value={watch("accountType")}
+                  key={selectedBank}
+                  value={selectedAccountType}
                   onValueChange={(val) => setValue("accountType", val as any, { shouldValidate: true })}
                 >
                   <SelectTrigger className="rounded-xl">
                     <SelectValue placeholder="Tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="debit">Débito</SelectItem>
-                    <SelectItem value="credit">Crédito</SelectItem>
+                    {selectedBank === 'bancolombia' && <SelectItem value="debit">Débito</SelectItem>}
+                    {selectedBank === 'nu' && <SelectItem value="credit">Crédito</SelectItem>}
+                    {!selectedBank && (
+                      <>
+                        <SelectItem value="debit">Débito</SelectItem>
+                        <SelectItem value="credit">Crédito</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -272,18 +302,20 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             )}
 
             <div className="grid gap-2">
-              <Label>Archivo (.pdf, .csv, .xlsx) <span className="text-rose-500">*</span></Label>
+              <Label>
+                Archivo ({selectedBank === 'nu' ? '.pdf' : '.csv, .xlsx'}) <span className="text-rose-500">*</span>
+              </Label>
               <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-2xl cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors ${errors.file ? 'border-rose-500 bg-rose-50/50' : 'border-zinc-200 dark:border-zinc-800'}`}>
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
                   <UploadIcon className={`h-6 w-6 mb-2 ${errors.file ? 'text-rose-400' : 'text-zinc-400'}`} />
-                  <p className={`text-xs ${errors.file ? 'text-rose-500 font-medium' : 'text-zinc-500'}`}>
+                  <p className={`text-xs ${errors.file ? 'text-rose-500 font-medium' : 'text-zinc-500 px-4 text-center'}`}>
                     {selectedFile ? selectedFile.name : (errors.file?.message || "Haz clic para seleccionar")}
                   </p>
                 </div>
                 <input
                   type="file"
                   className="hidden"
-                  accept=".csv,.xlsx,.pdf"
+                  accept={selectedBank === 'nu' ? ".pdf" : ".csv,.xlsx"}
                   onChange={handleFileChange}
                   disabled={isUploading}
                 />
