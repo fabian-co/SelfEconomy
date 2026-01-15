@@ -8,7 +8,7 @@ const execAsync = promisify(exec);
 
 export async function POST(request: Request) {
   try {
-    const { filePath, password } = await request.json();
+    const { filePath, password, action, paymentKeywords } = await request.json();
 
     if (!filePath) {
       return NextResponse.json({ error: 'Missing filePath' }, { status: 400 });
@@ -51,14 +51,42 @@ export async function POST(request: Request) {
       command += ` --password "${password}"`;
     }
 
-    // Check if filename has a date or similar that might be the password? 
-    // Or just generic.
+    if (action === 'analyze' && scriptName === 'nu.py') {
+      command += ' --analyze';
+    }
+
+    if (paymentKeywords && Array.isArray(paymentKeywords) && paymentKeywords.length > 0) {
+      // Escape keywords for command line
+      const keywordsStr = paymentKeywords.map((k: string) => `"${k}"`).join(' ');
+      command += ` --payment-keywords ${keywordsStr}`;
+    }
 
     const { stdout, stderr } = await execAsync(command);
 
-    if (stderr && !stdout.includes('Éxito')) {
-      console.error("Python Error:", stderr);
-      return NextResponse.json({ error: 'Processing failed', details: stderr }, { status: 500 });
+    if (stderr && !stdout.includes('Éxito') && !stdout.includes('Measure-Command')) {
+      // Note: PowerShell sometimes outputs to stderr even on success or for warnings. 
+      // Stricter check might be needed. The python script prints "Éxito" on success.
+      // However, json output for analyze might not print "Exito" if we dump json to file.
+      // Wait, the analyze mode also writes to --output file? 
+      // Yes, looking at nu.py, it dumps result to args.output.
+
+      if (!stdout.includes('Éxito') && action !== 'analyze') {
+        console.error("Python Error:", stderr);
+        return NextResponse.json({ error: 'Processing failed', details: stderr }, { status: 500 });
+      }
+    }
+
+    // For analyze action, read the output file content and return it
+    if (action === 'analyze') {
+      try {
+        const analyzeContent = await fs.promises.readFile(outputPath, 'utf-8');
+        return NextResponse.json({
+          success: true,
+          data: JSON.parse(analyzeContent)
+        });
+      } catch (err) {
+        return NextResponse.json({ error: 'Failed to read analysis result', details: err }, { status: 500 });
+      }
     }
 
     return NextResponse.json({

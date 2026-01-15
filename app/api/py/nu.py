@@ -31,7 +31,34 @@ def parse_currency(value):
     except ValueError:
         return None
 
-def process_nu_pdf(file_path, password=None, account_type='debit'):
+def process_nu_pdf(file_path, password=None, account_type='debit', analyze_only=False, payment_keywords=None):
+    if analyze_only:
+        # Return only unique transaction descriptions
+        unique_descriptions = set()
+        try:
+            with pdfplumber.open(file_path, password=password) as pdf:
+                all_text = ""
+                for page in pdf.pages:
+                    text = page.extract_text()
+                    if text:
+                        all_text += text + "\n"
+                
+                lines = all_text.split('\n')
+                for line in lines:
+                    match = re.search(r'^(\d{1,2}\s+[A-Z]{3}|\d{1,2}/\d{1,2}(?:/\d{2,4})?)\s+(.+?)\s+((\$|[-+])?\s*[\d.]+,\d{2})', line.strip())
+                    if match:
+                        desc = match.group(2).strip()
+                        # Ignore ranges or headers
+                        if " - " in line and re.search(r'[A-Z]{3}.* - .*[A-Z]{3}', line):
+                            continue
+                        desc = desc.rstrip('$').strip()
+                        unique_descriptions.add(desc)
+                        
+        except Exception as e:
+            raise Exception(f"Error analizando PDF de NuBank: {str(e)}")
+            
+        return {"descriptions": sorted(list(unique_descriptions))}
+
     data = {
         "meta_info": {
             "banco": "NuBank",
@@ -55,23 +82,13 @@ def process_nu_pdf(file_path, password=None, account_type='debit'):
                 if text:
                     all_text += text + "\n"
             
-            # Intentar extraer info básica de la cuenta/cliente (ejemplo hipotético)
-            # NuBank suele tener "Hola, [Nombre]"
+            # Intentar extraer info básica de la cuenta/cliente
             name_match = re.search(r'Hola,\s+([^\n!]+)', all_text)
             if name_match:
                 data["meta_info"]["cliente"]["nombre"] = name_match.group(1).strip()
 
-            # Extraer transacciones
-            # Patrón típico: DD MMM o DD/MM
-            # Ejemplo: "18 AGO Compra en Amazon -50.000,00"
-            # O en tablas. Intentaremos un regex genérico por ahora.
-            
             lines = all_text.split('\n')
             for line in lines:
-                # Buscar líneas que parezcan transacciones
-                # Ejemplo complejo: 26/07 Quest N $20.000,00 1 de 1 $20.000,00 1.84% $0,00 $20.000,00
-                # Buscamos: Fecha, luego descripción, luego EL PRIMER valor monetario que encontremos.
-                # Un valor monetario en NuBank suele tener coma para decimales: [\d.]+,\d{2}
                 match = re.search(r'^(\d{1,2}\s+[A-Z]{3}|\d{1,2}/\d{1,2}(?:/\d{2,4})?)\s+(.+?)\s+((\$|[-+])?\s*[\d.]+,\d{2})', line.strip())
                 
                 if match:
@@ -79,17 +96,13 @@ def process_nu_pdf(file_path, password=None, account_type='debit'):
                     desc = match.group(2).strip()
                     valor_str = match.group(3).strip()
                     
-                    # Ignorar líneas que parecen rangos de fechas o headers (ej. "28 JUN - 28 JUL")
                     if " - " in line and re.search(r'[A-Z]{3}.* - .*[A-Z]{3}', line):
                         continue
                     
-                    # Limpiar descripción si terminó con un símbolo de pesos accidental
                     desc = desc.rstrip('$').strip()
                     
                     valor = parse_currency(valor_str)
                     if valor is not None:
-                        # Convertir fecha a format DD/MM si es posible
-                        # Si es "18 AGO", convertir a "18/08" (aproximado)
                         month_map = {
                             'ENE': '01', 'FEB': '02', 'MAR': '03', 'ABR': '04',
                             'MAY': '05', 'JUN': '06', 'JUL': '07', 'AGO': '08',
@@ -100,23 +113,26 @@ def process_nu_pdf(file_path, password=None, account_type='debit'):
                                 fecha = f"{fecha.split()[0]}/{m_num}"
                                 break
 
-                        # Por defecto, en NuBank Tarjeta de Crédito todo es un cargo (negativo)
-                        # Excepto si la descripción indica un pago/abono
-                        # Usamos "gracias por tu" para ser más robustos (a veces "pago" queda en otra columna)
-                        is_payment = "gracias por tu" in desc.lower()
+                        # Determinate if it is a payment based on keywords
+                        is_payment = False
+                        if payment_keywords:
+                            # User provided keywords (exact or partial match?)
+                            # Let's assume partial match logic: if any keyword is in description
+                            is_payment = any(k.lower() in desc.lower() for k in payment_keywords)
+                        else:
+                            # Fallback if no keywords provided (legacy behavior)
+                            is_payment = "gracias por tu" in desc.lower()
                        
                         if not is_payment:
-                            # Asegurar que sea negativo si no es un pago
                             valor = -abs(valor)
                         else:
-                            # Asegurar que sea positivo si es un pago
                             valor = abs(valor)
 
                         data["transacciones"].append({
                             "fecha": fecha,
                             "descripcion": desc,
                             "valor": valor,
-                            "saldo": 0 # NuBank a veces no muestra el saldo línea a línea en el extracto de tarjeta
+                            "saldo": 0
                         })
                         
                         if valor > 0:
@@ -124,8 +140,6 @@ def process_nu_pdf(file_path, password=None, account_type='debit'):
                         else:
                             data["meta_info"]["resumen"]["total_cargos"] += abs(valor)
 
-            # Ajustar saldo actual si no se encuentra
-            # (En un script real buscaríamos el "Saldo total" o similar)
             data["meta_info"]["resumen"]["saldo_actual"] = data["meta_info"]["resumen"]["total_abonos"] - data["meta_info"]["resumen"]["total_cargos"]
 
     except Exception as e:
@@ -139,11 +153,19 @@ if __name__ == "__main__":
     parser.add_argument('--output', type=str, required=True, help='Ruta al archivo JSON de salida')
     parser.add_argument('--password', type=str, help='Contraseña del PDF')
     parser.add_argument('--account-type', type=str, default='debit', help='Tipo de cuenta (debit/credit)')
+    parser.add_argument('--analyze', action='store_true', help='Solo analizar descripciones únicas')
+    parser.add_argument('--payment-keywords', type=str, nargs='*', help='Palabras clave para identificar pagos')
     
     args = parser.parse_args()
     
     try:
-        resultado = process_nu_pdf(args.input, args.password, args.account_type)
+        resultado = process_nu_pdf(args.input, args.password, args.account_type, args.analyze, args.payment_keywords)
+        
+        os.makedirs(os.path.dirname(args.output), exist_ok=True)
+        with open(args.output, "w", encoding="utf-8") as f:
+            json.dump(resultado, f, ensure_ascii=False, indent=2)
+        
+        print(f"Éxito: Archivo guardado en {args.output}")
         
         os.makedirs(os.path.dirname(args.output), exist_ok=True)
         with open(args.output, "w", encoding="utf-8") as f:
