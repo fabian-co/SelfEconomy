@@ -69,6 +69,7 @@ export function TransactionList({
             date={tx.fecha}
             value={tx.valor}
             banco={tx.banco}
+            accountType={tx.tipo_cuenta}
             ignored={tx.ignored}
           />
         ))}
