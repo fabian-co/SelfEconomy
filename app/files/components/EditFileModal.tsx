@@ -109,7 +109,7 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
           filePath: editForm.sourcePath || file.name, // Use JSON name if source is missing
           password: editForm.password,
           paymentKeywords: editForm.keywords,
-          action: editForm.sourcePath ? 'process' : 'recalculate_json',
+          action: (editForm.sourcePath && !editForm.bank?.toLowerCase().includes('nu')) ? 'process' : 'recalculate_json',
           outputName: editForm.name // Just the basename
         }),
       });
@@ -158,7 +158,7 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
               />
             </div>
 
-            {editForm.sourcePath && editForm.sourcePath.toLowerCase().endsWith('.pdf') && (
+            {editForm.sourcePath && editForm.sourcePath.toLowerCase().endsWith('.pdf') && !editForm.bank?.toLowerCase().includes('nu') && (
               <div className="grid gap-2">
                 <Label htmlFor="edit-pwd" className="text-sm font-semibold text-amber-600 dark:text-amber-400">
                   Contraseña del PDF Original
