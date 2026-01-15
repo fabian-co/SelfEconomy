@@ -256,7 +256,7 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
             className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white text-sm font-semibold rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center gap-2"
           >
             {isSaving ? <Loader2Icon className="h-4 w-4 animate-spin" /> : <CheckIcon className="h-4 w-4" />}
-            Guardar Cambios
+            {isSaving ? 'Guardando...' : 'Guardar Cambios'}
           </button>
         </DialogFooter>
       </DialogContent>

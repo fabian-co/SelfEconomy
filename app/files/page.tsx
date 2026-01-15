@@ -144,13 +144,28 @@ export default function FilesPage() {
         />
 
         {/* Content */}
-        {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2Icon className="h-8 w-8 animate-spin text-zinc-300" />
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {files.length === 0 ? (
+        {/* Content */}
+        <div className="relative min-h-[200px]">
+          {/* Initial Loading State */}
+          {isLoading && files.length === 0 && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2Icon className="h-8 w-8 animate-spin text-zinc-300" />
+            </div>
+          )}
+
+          {/* Refresh Loading Overlay */}
+          {isLoading && files.length > 0 && (
+            <div className="absolute inset-0 z-10 bg-white/50 dark:bg-black/50 flex items-center justify-center backdrop-blur-sm rounded-2xl transition-all duration-300">
+              <div className="bg-white dark:bg-zinc-800 p-3 rounded-2xl shadow-xl flex items-center gap-3">
+                <Loader2Icon className="h-5 w-5 animate-spin text-emerald-500" />
+                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Actualizando...</span>
+              </div>
+            </div>
+          )}
+
+          {/* File List */}
+          <div className={`space-y-4 transition-all duration-300 ${isLoading && files.length > 0 ? 'opacity-40 blur-sm grayscale' : 'opacity-100'}`}>
+            {files.length === 0 && !isLoading ? (
               <div className="text-center py-20 text-zinc-400 bg-zinc-100/50 dark:bg-zinc-900/50 rounded-2xl border border-dashed border-zinc-200 dark:border-zinc-800">
                 No files found
               </div>
@@ -169,7 +184,7 @@ export default function FilesPage() {
               ))
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

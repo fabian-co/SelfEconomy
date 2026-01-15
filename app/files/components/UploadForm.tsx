@@ -298,9 +298,17 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
                 disabled={isUploading || !isValid}
                 className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:shadow-none text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
               >
-                {isUploading ? <Loader2Icon className="h-5 w-5 animate-spin" /> :
-                  (selectedBank === 'nu' && selectedAccountType === 'credit') ? <SearchIcon className="h-5 w-5" /> : <UploadIcon className="h-5 w-5" />}
-                {(selectedBank === 'nu' && selectedAccountType === 'credit') ? 'Analizar Archivo' : 'Subir y Procesar'}
+                {isUploading ? (
+                  <>
+                    <Loader2Icon className="h-5 w-5 animate-spin" />
+                    {(selectedBank === 'nu' && selectedAccountType === 'credit') ? 'Analizando...' : 'Subiendo...'}
+                  </>
+                ) : (
+                  <>
+                    {(selectedBank === 'nu' && selectedAccountType === 'credit') ? <SearchIcon className="h-5 w-5" /> : <UploadIcon className="h-5 w-5" />}
+                    {(selectedBank === 'nu' && selectedAccountType === 'credit') ? 'Analizar Archivo' : 'Subir y Procesar'}
+                  </>
+                )}
               </button>
             </DialogFooter>
           </form>
@@ -360,7 +368,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
                 className="flex-[2] py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-200 disabled:text-zinc-400 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
               >
                 {isUploading ? <Loader2Icon className="h-5 w-5 animate-spin" /> : <CheckIcon className="h-5 w-5" />}
-                Confirmar y Procesar
+                {isUploading ? 'Procesando...' : 'Confirmar y Procesar'}
               </button>
             </DialogFooter>
           </div>
