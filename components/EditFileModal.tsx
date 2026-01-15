@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2Icon, CheckIcon, XIcon } from "lucide-react";
+import { Loader2Icon, CheckIcon, XIcon, SearchIcon } from "lucide-react";
 import { toast } from "sonner";
 
 interface EditFileModalProps {
@@ -20,6 +20,7 @@ interface EditFileModalProps {
 export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModalProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [editForm, setEditForm] = useState<{
     name: string;
     keywords: string[];
@@ -34,6 +35,7 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
     } else {
       // Reset form when closing
       setEditForm({ name: "", keywords: [], allDescriptions: [], sourcePath: null, password: "" });
+      setSearchTerm("");
     }
   }, [isOpen, file]);
 
@@ -106,6 +108,11 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
         }),
       });
 
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Error al actualizar el archivo');
+      }
+
       toast.success("Archivo actualizado correctamente");
       onSuccess();
       onClose();
@@ -124,6 +131,10 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
         : [...prev.keywords, desc]
     }));
   };
+
+  const filteredDescriptions = editForm.allDescriptions.filter(desc =>
+    desc.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -151,8 +162,6 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
                 className="rounded-xl"
               />
             </div>
-
-
 
             {editForm.sourcePath && editForm.sourcePath.toLowerCase().endsWith('.pdf') && (
               <div className="grid gap-2">
@@ -194,9 +203,19 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
                 )}
               </div>
 
+              <div className="relative">
+                <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-400" />
+                <Input
+                  placeholder="Buscar transacción..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-9 text-sm rounded-xl"
+                />
+              </div>
+
               <ScrollArea className="h-[200px] w-full rounded-xl border p-2">
                 <div className="space-y-1">
-                  {editForm.allDescriptions.map((desc, i) => {
+                  {filteredDescriptions.map((desc, i) => {
                     const isSelected = editForm.keywords.includes(desc);
                     return (
                       <div
@@ -211,9 +230,11 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
                       </div>
                     );
                   })}
-                  {editForm.allDescriptions.length === 0 && (
+                  {filteredDescriptions.length === 0 && (
                     <div className="text-center py-10">
-                      <p className="text-xs text-zinc-400">No se encontraron transacciones en el extracto original.</p>
+                      <p className="text-xs text-zinc-400">
+                        {editForm.allDescriptions.length === 0 ? "No se encontraron transacciones." : "No hay resultados para la búsqueda."}
+                      </p>
                     </div>
                   )}
                 </div>
