@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     }
 
     const allFiles = await getFilesRecursively(DATA_DIR);
-    const targetExtensions = ['.json', '.csv', '.xlsx', '.pdf'];
+    const targetExtensions = ['.json'];
     const filteredFiles = allFiles.filter(file =>
       targetExtensions.some(ext => file.toLowerCase().endsWith(ext))
     );

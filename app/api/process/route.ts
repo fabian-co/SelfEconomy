@@ -181,6 +181,15 @@ export async function POST(request: Request) {
       }
     }
 
+    // Delete source file after successful processing
+    if (action === 'process' || !action) {
+      try {
+        await fs.promises.unlink(sourcePath);
+      } catch (err) {
+        console.warn(`Could not delete source file: ${sourcePath}`, err);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: stdout.trim(),
