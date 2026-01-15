@@ -88,6 +88,7 @@ La interfaz de usuario está construida utilizando **shadcn/ui**, lo que proporc
 - **Ubicación:** Los componentes de la UI se encuentran en el directorio `components/`.
 - **Uso:** Se debe priorizar el uso de estos componentes predefinidos para mantener la consistencia visual en toda la aplicación.
 - **Skills Next.js 16:** Consulta [SKILLS.md](skills/nextjs/SKILLS.md) para ver las nuevas características y buenas prácticas de Next.js 16.
+- **Skills Tailwind & Shadcn:** Consulta [SKILL.md](skills/tailwind/SKILL.md) para ver las convenciones de diseño, uso de Shadcn e IDs para depuración.
 
 ## Flujo de Trabajo para Agregar Nuevos Agentes
 
