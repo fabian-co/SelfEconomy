@@ -63,6 +63,7 @@ def process_nu_pdf(file_path, password=None, account_type='debit', analyze_only=
         "meta_info": {
             "banco": "NuBank",
             "tipo_cuenta": account_type,
+            "payment_keywords": payment_keywords or [],
             "cliente": {},
             "cuenta": {},
             "resumen": {
@@ -115,13 +116,13 @@ def process_nu_pdf(file_path, password=None, account_type='debit', analyze_only=
 
                         # Determinate if it is a payment based on keywords
                         is_payment = False
-                        if payment_keywords:
-                            # User provided keywords (exact or partial match?)
-                            # Let's assume partial match logic: if any keyword is in description
+                        if payment_keywords and len(payment_keywords) > 0:
+                            # User provided keywords (partial match logic)
                             is_payment = any(k.lower() in desc.lower() for k in payment_keywords)
                         else:
-                            # Fallback if no keywords provided (legacy behavior)
-                            is_payment = "gracias por tu" in desc.lower()
+                            # If no keywords provided for credit card, we don't assume anything as payment
+                            # except for debit accounts where we might have different logic (handled by sign)
+                            is_payment = False
                        
                         if not is_payment:
                             valor = -abs(valor)
@@ -160,12 +161,6 @@ if __name__ == "__main__":
     
     try:
         resultado = process_nu_pdf(args.input, args.password, args.account_type, args.analyze, args.payment_keywords)
-        
-        os.makedirs(os.path.dirname(args.output), exist_ok=True)
-        with open(args.output, "w", encoding="utf-8") as f:
-            json.dump(resultado, f, ensure_ascii=False, indent=2)
-        
-        print(f"Éxito: Archivo guardado en {args.output}")
         
         os.makedirs(os.path.dirname(args.output), exist_ok=True)
         with open(args.output, "w", encoding="utf-8") as f:
