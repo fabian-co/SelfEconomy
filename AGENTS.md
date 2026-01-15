@@ -90,6 +90,16 @@ La interfaz de usuario está construida utilizando **shadcn/ui**, lo que proporc
 - **Skills Next.js 16:** Consulta [SKILLS.md](skills/nextjs/SKILLS.md) para ver las nuevas características y buenas prácticas de Next.js 16.
 - **Skills Tailwind & Shadcn:** Consulta [SKILL.md](skills/tailwind/SKILL.md) para ver las convenciones de diseño, uso de Shadcn e IDs para depuración.
 
+## 5. Arquitectura del Proyecto (Screaming Architecture)
+
+El proyecto sigue el principio de **Screaming Architecture**, con el objetivo de que la estructura de carpetas comunique claramente la intención y las funcionalidades del sistema.
+
+- **Organización por Funcionalidad:** Cada página principal de la aplicación debe tener su propia carpeta que contenga:
+  - `page.tsx`: El componente de página principal.
+  - `components/`: Carpeta con componentes específicos para esa página/funcionalidad.
+  - `types/`: Definiciones de tipos TypeScript locales y específicos.
+- **Legibilidad:** Esta estructura busca mantener el proyecto organizado, modular y fácil de navegar, asegurando que los componentes relacionados estén agrupados lógicamente.
+
 ## Flujo de Trabajo para Agregar Nuevos Agentes
 
 1.  Crear nuevo script en `app/api/py/nuevo_banco.py`.
