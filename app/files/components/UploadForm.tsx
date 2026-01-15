@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { RuleConfiguration } from "./RuleConfiguration";
 
 const uploadSchema = z.object({
   extractName: z.string().min(1, "El nombre del extracto es obligatorio"),
@@ -43,7 +44,6 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   const [step, setStep] = useState<'upload' | 'configure'>('upload');
   const [analysisDescriptions, setAnalysisDescriptions] = useState<string[]>([]);
   const [selectedPayments, setSelectedPayments] = useState<string[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
   const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
 
   const {
@@ -167,18 +167,10 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
       setStep('upload');
       setAnalysisDescriptions([]);
       setSelectedPayments([]);
-      setSearchTerm("");
       setUploadedFilePath(null);
     }, 300);
   };
 
-  const togglePayment = (desc: string) => {
-    setSelectedPayments(prev =>
-      prev.includes(desc)
-        ? prev.filter(p => p !== desc)
-        : [...prev, desc]
-    );
-  };
 
   const onSubmit = async (values: UploadFormValues) => {
     // If NuBank Credit Card OR Bancolombia Debit, analyze first
@@ -320,67 +312,13 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
           </form>
         ) : (
           <div className="flex flex-col gap-4 py-4">
-            <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-xl text-sm text-blue-600 dark:text-blue-400">
-              {selectedBank === 'bancolombia' ? (
-                <>Selecciona las transacciones que deseas <strong>ignorar</strong> (ej: pagos de tarjeta). Estas no se incluirán en el reporte.</>
-              ) : (
-                <>Selecciona las transacciones que correspondan a <strong>pagos a la tarjeta</strong>. Estas se registrarán como valores positivos.</>
-              )}
-            </div>
-
-            {/* Search Bar */}
-            <div className="relative">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-              <Input
-                placeholder="Buscar transacción..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 rounded-xl bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-              />
-            </div>
-
-            {selectedPayments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {selectedPayments.map((payment, i) => (
-                  <Badge key={i} variant="secondary" className="pl-3 pr-1 py-1 rounded-lg text-xs font-normal flex items-center gap-1">
-                    {payment}
-                    <button
-                      onClick={() => togglePayment(payment)}
-                      className="p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full transition-colors"
-                    >
-                      <XIcon className="h-3 w-3 text-zinc-500" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
-
-            <ScrollArea className="h-[300px] w-full rounded-xl border p-4">
-              <div className="space-y-4">
-                {analysisDescriptions
-                  .filter(desc => desc.toLowerCase().includes(searchTerm.toLowerCase()))
-                  .map((desc, i) => (
-                    <div key={i} className="flex items-start space-x-3 p-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-lg transition-colors">
-                      <Checkbox
-                        id={`desc-${i}`}
-                        checked={selectedPayments.includes(desc)}
-                        onCheckedChange={() => togglePayment(desc)}
-                      />
-                      <label
-                        htmlFor={`desc-${i}`}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer pt-0.5"
-                      >
-                        {desc}
-                      </label>
-                    </div>
-                  ))}
-                {analysisDescriptions.filter(desc => desc.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
-                  <div className="text-center py-10 text-zinc-400 text-sm">
-                    No se encontraron coincidencias
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
+            <RuleConfiguration
+              bank={selectedBank}
+              accountType={selectedAccountType}
+              transactions={analysisDescriptions}
+              selectedRules={selectedPayments}
+              onRulesChange={setSelectedPayments}
+            />
 
             <DialogFooter className="mt-4 gap-2">
               <button
@@ -402,6 +340,6 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
           </div>
         )}
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 }

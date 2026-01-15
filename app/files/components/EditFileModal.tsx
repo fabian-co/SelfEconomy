@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2Icon, CheckIcon, XIcon, SearchIcon } from "lucide-react";
 import { toast } from "sonner";
+import { RuleConfiguration } from "./RuleConfiguration";
 
 interface EditFileModalProps {
   file: { name: string } | null;
@@ -20,22 +21,22 @@ interface EditFileModalProps {
 export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModalProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [editForm, setEditForm] = useState<{
     name: string;
     keywords: string[];
     allDescriptions: string[];
     sourcePath: string | null;
     password?: string;
-  }>({ name: "", keywords: [], allDescriptions: [], sourcePath: null });
+    bank?: string;
+    accountType?: string;
+  }>({ name: "", keywords: [], allDescriptions: [], sourcePath: null, bank: 'other', accountType: 'debit' });
 
   useEffect(() => {
     if (isOpen && file) {
       loadFileData(file.name);
     } else {
       // Reset form when closing
-      setEditForm({ name: "", keywords: [], allDescriptions: [], sourcePath: null, password: "" });
-      setSearchTerm("");
+      setEditForm({ name: "", keywords: [], allDescriptions: [], sourcePath: null, password: "", bank: 'other', accountType: 'debit' });
     }
   }, [isOpen, file]);
 
@@ -65,7 +66,9 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
         name: baseName,
         keywords: keywords,
         allDescriptions: jsonDescriptions,
-        sourcePath: sourcePath
+        sourcePath: sourcePath,
+        bank: meta.banco || 'other',
+        accountType: meta.tipo_cuenta || 'debit'
       }));
     } catch (error) {
       console.error(error);
@@ -74,6 +77,8 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
       setIsLoading(false);
     }
   };
+
+
 
   const handleSave = async () => {
     if (!file) return;
@@ -124,18 +129,7 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
     }
   };
 
-  const toggleKeyword = (desc: string) => {
-    setEditForm(prev => ({
-      ...prev,
-      keywords: prev.keywords.includes(desc)
-        ? prev.keywords.filter(p => p !== desc)
-        : [...prev.keywords, desc]
-    }));
-  };
 
-  const filteredDescriptions = editForm.allDescriptions.filter(desc =>
-    desc.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -183,63 +177,20 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
               </div>
             )}
 
-            <div className="grid gap-3">
-              <Label className="text-sm font-semibold">Configuración de Reglas (Pagos / Ignorar)</Label>
+            <div className="grid gap-4 py-4">
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                  Configuración de Reglas (Pagos / Ignorar)
+                </h3>
 
-              <div className="flex flex-wrap gap-2 min-h-[40px] p-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800">
-                {editForm.keywords.length > 0 ? (
-                  editForm.keywords.map((kw, i) => (
-                    <Badge key={i} variant="secondary" className="pl-3 pr-1 py-1 rounded-lg text-xs font-normal flex items-center gap-1">
-                      {kw}
-                      <button
-                        onClick={() => toggleKeyword(kw)}
-                        className="p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full transition-colors"
-                      >
-                        <XIcon className="h-3 w-3 text-zinc-500" />
-                      </button>
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="text-xs text-zinc-400 italic flex items-center px-1">Sin pagos seleccionados</span>
-                )}
-              </div>
-
-              <div className="relative">
-                <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-400" />
-                <Input
-                  placeholder="Buscar transacción..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 h-9 text-sm rounded-xl"
+                <RuleConfiguration
+                  bank={editForm.bank?.toLowerCase().includes('bancolombia') ? 'bancolombia' : 'nu'}
+                  accountType={editForm.accountType || 'debit'}
+                  transactions={editForm.allDescriptions}
+                  selectedRules={editForm.keywords}
+                  onRulesChange={(rules) => setEditForm(prev => ({ ...prev, keywords: rules }))}
                 />
               </div>
-
-              <ScrollArea className="h-[200px] w-full rounded-xl border p-2">
-                <div className="space-y-1">
-                  {filteredDescriptions.map((desc, i) => {
-                    const isSelected = editForm.keywords.includes(desc);
-                    return (
-                      <div
-                        key={i}
-                        onClick={() => toggleKeyword(desc)}
-                        className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${isSelected ? 'bg-emerald-50 dark:bg-emerald-900/10' : 'hover:bg-zinc-50 dark:hover:bg-zinc-900'}`}
-                      >
-                        <Checkbox checked={isSelected} onCheckedChange={() => { }} className={isSelected ? 'border-emerald-500 data-[state=checked]:bg-emerald-500' : ''} />
-                        <span className={`text-xs truncate ${isSelected ? 'font-medium text-emerald-700 dark:text-emerald-400' : 'text-zinc-600 dark:text-zinc-400'}`}>
-                          {desc}
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {filteredDescriptions.length === 0 && (
-                    <div className="text-center py-10">
-                      <p className="text-xs text-zinc-400">
-                        {editForm.allDescriptions.length === 0 ? "No se encontraron transacciones." : "No hay resultados para la búsqueda."}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
             </div>
           </div>
         )}
@@ -261,6 +212,6 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
           </button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </Dialog >
   );
 }
