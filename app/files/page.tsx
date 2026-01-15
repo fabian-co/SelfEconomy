@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { FileItem } from "@/components/FileItem";
 import { UploadForm } from "@/components/UploadForm";
+import { EditFileModal } from "@/components/EditFileModal";
 import { Loader2Icon, ArrowLeftIcon, RefreshCwIcon, UploadIcon } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ export default function FilesPage() {
   const [files, setFiles] = useState<FileData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [editingFile, setEditingFile] = useState<FileData | null>(null);
 
   const fetchFiles = async () => {
     setIsLoading(true);
@@ -92,7 +94,6 @@ export default function FilesPage() {
       });
 
       await promise;
-      // Refresh file list to see the new JSON if created
       fetchFiles();
 
     } catch (error) {
@@ -135,6 +136,13 @@ export default function FilesPage() {
           onUploadSuccess={fetchFiles}
         />
 
+        <EditFileModal
+          file={editingFile}
+          isOpen={!!editingFile}
+          onClose={() => setEditingFile(null)}
+          onSuccess={fetchFiles}
+        />
+
         {/* Content */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
@@ -156,6 +164,7 @@ export default function FilesPage() {
                   onRename={(newName) => handleRename(file.name, newName)}
                   onDelete={() => handleDelete(file.name)}
                   onProcess={(pwd) => handleProcess(file.name, pwd)}
+                  onEdit={() => setEditingFile(file)}
                 />
               ))
             )}

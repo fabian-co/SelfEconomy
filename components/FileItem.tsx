@@ -11,14 +11,25 @@ interface FileItemProps {
   onRename: (newName: string) => void;
   onDelete: () => void;
   onProcess?: (password?: string) => Promise<void>;
+  onEdit?: () => void;
 }
 
-export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess }: FileItemProps) {
+export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess, onEdit }: FileItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(name);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPasswordPrompt, setShowPasswordPrompt] = useState(false);
   const [password, setPassword] = useState("");
+
+  const isJSON = name.toLowerCase().endsWith('.json');
+
+  const handleEditClick = () => {
+    if (isJSON && onEdit) {
+      onEdit();
+    } else {
+      setIsEditing(true);
+    }
+  };
 
   const handleSaveRename = () => {
     if (newName && newName !== name) {
@@ -129,8 +140,9 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess 
               </button>
             )}
             <button
-              onClick={() => setIsEditing(true)}
+              onClick={handleEditClick}
               className="p-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors"
+              title={isJSON ? "Edit settings" : "Rename"}
             >
               <PencilIcon className="h-4 w-4" />
             </button>

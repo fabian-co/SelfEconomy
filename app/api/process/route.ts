@@ -8,23 +8,34 @@ const execAsync = promisify(exec);
 
 export async function POST(request: Request) {
   try {
-    const { filePath, password, action, paymentKeywords } = await request.json();
+    const { filePath, password, action, paymentKeywords, outputName } = await request.json();
 
     if (!filePath) {
       return NextResponse.json({ error: 'Missing filePath' }, { status: 400 });
     }
 
     // Absolute path to the source file
-    // The filePath received is relative to app/api/extracto
-    const sourcePath = path.join(process.cwd(), 'app', 'api', 'extracto', filePath);
+    // The filePath received can be relative to app/api/extracto (new uploads)
+    // or absolute (re-processing from stored source_file_path)
+    const sourcePath = path.isAbsolute(filePath)
+      ? filePath
+      : path.join(process.cwd(), 'app', 'api', 'extracto', filePath);
 
     // Detect bank and account type based on path
     const normalizedPath = filePath.toLowerCase().replace(/\\/g, '/');
-    const pathParts = normalizedPath.split('/');
 
-    // Structure: [bank]/[accountType]/filename.ext
-    const bank = pathParts[0];
-    const accountType = pathParts[1] || 'debit';
+    let bank = 'other';
+    let accountType = 'debit';
+
+    if (normalizedPath.includes('/nu/')) {
+      bank = 'nu';
+    } else if (normalizedPath.includes('/bancolombia/')) {
+      bank = 'bancolombia';
+    }
+
+    if (normalizedPath.includes('/credit/')) {
+      accountType = 'credit';
+    }
 
     let scriptName = 'bancolombia.py';
     if (bank === 'nu') {
@@ -37,9 +48,51 @@ export async function POST(request: Request) {
     const scriptPath = path.join(process.cwd(), 'app', 'api', 'py', scriptName);
     const pythonPath = path.join(process.cwd(), 'venv', 'Scripts', 'python.exe');
 
+    // Recalculate JSON directly if source PDF is missing or requested
+    if (action === 'recalculate_json') {
+      const jsonFileName = outputName || path.basename(filePath, path.extname(filePath));
+      const jsonPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', `${jsonFileName}.json`);
+
+      try {
+        const content = await fs.promises.readFile(jsonPath, 'utf-8');
+        const data = JSON.parse(content);
+
+        // Update keywords
+        data.meta_info.payment_keywords = paymentKeywords || [];
+
+        // Recalculate transactions and totals
+        let totalAbonos = 0;
+        let totalCargos = 0;
+
+        data.transacciones = data.transacciones.map((t: any) => {
+          const isPayment = (paymentKeywords || []).some((k: string) =>
+            t.descripcion.toLowerCase().includes(k.toLowerCase())
+          );
+
+          // Force absolute value and then apply sign
+          const absVal = Math.abs(t.valor);
+          const newVal = isPayment ? absVal : -absVal;
+
+          if (newVal > 0) totalAbonos += newVal;
+          else totalCargos += Math.abs(newVal);
+
+          return { ...t, valor: newVal };
+        });
+
+        data.meta_info.resumen.total_abonos = totalAbonos;
+        data.meta_info.resumen.total_cargos = totalCargos;
+        data.meta_info.resumen.saldo_actual = totalAbonos - totalCargos;
+
+        await fs.promises.writeFile(jsonPath, JSON.stringify(data, null, 2));
+        return NextResponse.json({ success: true, message: 'JSON recalculado correctamente' });
+      } catch (err: any) {
+        return NextResponse.json({ error: `Error al recalcular JSON: ${err.message}` }, { status: 500 });
+      }
+    }
+
     // Dynamic output name based on input filename
     const fileName = path.basename(filePath, path.extname(filePath));
-    const outputPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', `${fileName}.json`);
+    const outputPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', `${outputName || fileName}.json`);
 
     // Ensure output directory exists
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });

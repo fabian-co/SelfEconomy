@@ -64,6 +64,7 @@ def process_nu_pdf(file_path, password=None, account_type='debit', analyze_only=
             "banco": "NuBank",
             "tipo_cuenta": account_type,
             "payment_keywords": payment_keywords or [],
+            "source_file_path": file_path,
             "cliente": {},
             "cuenta": {},
             "resumen": {

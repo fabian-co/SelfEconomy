@@ -13,8 +13,22 @@ async function getFilesRecursively(dir: string): Promise<string[]> {
   return Array.prototype.concat(...files);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const name = searchParams.get('name');
+
+    // If name is provided, return file content
+    if (name) {
+      const filePath = path.join(DATA_DIR, name);
+      try {
+        const content = await fs.readFile(filePath, 'utf-8');
+        return NextResponse.json({ content });
+      } catch (err) {
+        return NextResponse.json({ error: 'File not found' }, { status: 404 });
+      }
+    }
+
     // Ensure directory exists
     try {
       await fs.access(DATA_DIR);
