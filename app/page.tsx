@@ -27,18 +27,29 @@ export default function Home() {
         const content = fs.readFileSync(path.join(processedDir, file), 'utf8');
         const data = JSON.parse(content);
 
-        // Add source/bank info to each transaction
+        // Add source/bank info and account type to each transaction
         const bankName = data.meta_info?.banco || "Bancolombia";
+        const accountType = data.meta_info?.tipo_cuenta || "debit";
+
         const transactionsWithSource = data.transacciones.map((tx: any) => ({
           ...tx,
-          banco: bankName
+          banco: bankName,
+          tipo_cuenta: accountType
         }));
 
         allTransactions = [...allTransactions, ...transactionsWithSource];
 
         // Aggregate totals
         metaInfo.resumen.saldo_actual += data.meta_info?.resumen?.saldo_actual || 0;
-        metaInfo.resumen.total_abonos += data.meta_info?.resumen?.total_abonos || 0;
+
+        // Treat credit card "abonos" (payments to the card) differently
+        if (accountType === 'credit') {
+          // For credit cards, 'abonos' are payments TO the card, not income.
+          // We don't add them to the global income summary as requested.
+        } else {
+          metaInfo.resumen.total_abonos += data.meta_info?.resumen?.total_abonos || 0;
+        }
+
         metaInfo.resumen.total_cargos += data.meta_info?.resumen?.total_cargos || 0;
 
         // Use earliest date as "desde"

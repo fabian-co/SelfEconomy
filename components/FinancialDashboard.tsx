@@ -14,6 +14,7 @@ interface Transaction {
   valor: number;
   saldo: number;
   banco?: string;
+  tipo_cuenta?: string;
 }
 
 interface MetaInfo {
@@ -80,7 +81,10 @@ export function FinancialDashboard({ transactions, metaInfo }: FinancialDashboar
       group.transactions.push(tx);
 
       if (tx.valor >= 0) {
-        group.totalIncome += tx.valor;
+        // Only count as income if it's NOT a credit card payment
+        if (tx.tipo_cuenta !== 'credit') {
+          group.totalIncome += tx.valor;
+        }
       } else {
         group.totalExpense += tx.valor;
       }
