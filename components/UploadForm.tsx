@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2Icon, UploadIcon, SearchIcon, CheckIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2Icon, UploadIcon, SearchIcon, CheckIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -308,6 +309,22 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-xl text-sm text-blue-600 dark:text-blue-400">
               Selecciona las transacciones que correspondan a <strong>pagos a la tarjeta</strong>. Estas se registrarán como valores positivos.
             </div>
+
+            {selectedPayments.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {selectedPayments.map((payment, i) => (
+                  <Badge key={i} variant="secondary" className="pl-3 pr-1 py-1 rounded-lg text-xs font-normal flex items-center gap-1">
+                    {payment}
+                    <button
+                      onClick={() => togglePayment(payment)}
+                      className="p-0.5 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-full transition-colors"
+                    >
+                      <XIcon className="h-3 w-3 text-zinc-500" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
 
             <ScrollArea className="h-[300px] w-full rounded-xl border p-4">
               <div className="space-y-4">
