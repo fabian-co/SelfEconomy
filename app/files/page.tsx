@@ -12,6 +12,8 @@ interface FileData {
   name: string;
   size: number;
   updatedAt: string;
+  bank?: string | null;
+  accountType?: string | null;
 }
 
 export default function FilesPage() {
@@ -180,6 +182,8 @@ export default function FilesPage() {
                   onDelete={() => handleDelete(file.name)}
                   onProcess={(pwd) => handleProcess(file.name, pwd)}
                   onEdit={() => setEditingFile(file)}
+                  bank={file.bank}
+                  accountType={file.accountType}
                 />
               ))
             )}

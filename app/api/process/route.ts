@@ -126,7 +126,7 @@ export async function POST(request: Request) {
 
     // Dynamic output name based on input filename
     const fileName = path.basename(filePath, path.extname(filePath));
-    const outputPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', `${outputName || fileName}.json`);
+    const outputPath = path.join(path.dirname(sourcePath), `${outputName || fileName}.json`);
 
     // Ensure output directory exists
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });

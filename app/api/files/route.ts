@@ -44,12 +44,30 @@ export async function GET(request: Request) {
 
     const fileStats = await Promise.all(filteredFiles.map(async (filePath) => {
       const stats = await fs.stat(filePath);
-      // Return relative path from DATA_DIR
       const relativePath = path.relative(DATA_DIR, filePath).split(path.sep).join('/');
+
+      let bank = null;
+      let accountType = null;
+
+      if (filePath.toLowerCase().endsWith('.json')) {
+        try {
+          const content = await fs.readFile(filePath, 'utf-8');
+          const data = JSON.parse(content);
+          if (data.meta_info) {
+            bank = data.meta_info.banco || null;
+            accountType = data.meta_info.tipo_cuenta || null;
+          }
+        } catch (e) {
+          console.warn(`Could not read metadata for ${filePath}`, e);
+        }
+      }
+
       return {
         name: relativePath,
         size: stats.size,
-        updatedAt: stats.mtime
+        updatedAt: stats.mtime,
+        bank,
+        accountType
       };
     }));
 
