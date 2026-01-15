@@ -2,7 +2,8 @@ export interface Transaction {
   fecha: string;
   descripcion: string;
   valor: number;
-  saldo: number;
+  saldo?: number;
+  ignored?: boolean;
   banco?: string;
   tipo_cuenta?: string;
 }

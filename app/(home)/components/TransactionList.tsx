@@ -42,6 +42,7 @@ export function TransactionList({
             date={tx.fecha}
             value={tx.valor}
             banco={tx.banco}
+            ignored={tx.ignored}
           />
         ))}
       </div>

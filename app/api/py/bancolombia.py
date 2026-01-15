@@ -30,56 +30,28 @@ def convert_xlsx_to_csv(xlsx_path, csv_path):
     except Exception as e:
         raise Exception(f"Error al convertir XLSX a CSV: {str(e)}")
 
-def process_extract(file_path, account_type='debit'):
-    # Estructura base del JSON resultante
+def process_extract_logic(rows, sections, ignore_keywords=None):
     data = {
         "meta_info": {
             "banco": "Bancolombia",
-            "tipo_cuenta": account_type,
+            "tipo_cuenta": "debit", # Will be updated by caller if needed
+            "ignore_keywords": ignore_keywords or [],
             "cliente": {},
             "cuenta": {},
             "resumen": {}
         },
         "transacciones": []
     }
-    
-    # Mapeo de títulos de sección a claves en nuestro JSON
-    sections = {
-        "Información Cliente:": "cliente",
-        "Información General:": "cuenta",
-        "Resumen:": "resumen",
-        "Movimientos:": "transacciones"
-    }
-    
+
     current_section = None
     headers = []
     
-    # Intentar con diferentes encodificaciones
-    encodings = ['utf-8', 'latin-1', 'cp1252']
-    rows = []
-    
-    for enc in encodings:
-        try:
-            with open(file_path, 'r', encoding=enc) as f:
-                reader = csv.reader(f)
-                rows = list(reader)
-            if rows:
-                break
-        except (UnicodeDecodeError, FileNotFoundError):
-            continue
-
-        
     for i, row in enumerate(rows):
-        # Saltar filas vacías
         if not row: continue
-        
         first_cell = row[0].strip()
         
-        # 1. Detectar cambio de sección
-        # 1. Detectar cambio de sección (búsqueda parcial para evitar problemas de tildes)
         found_section = None
         for marker, key in sections.items():
-            # Limpiamos el marcador de dos puntos y espacios para comparar mejor
             clean_marker = marker.replace(":", "").strip()
             if clean_marker in first_cell or first_cell in clean_marker:
                 found_section = key
@@ -87,22 +59,16 @@ def process_extract(file_path, account_type='debit'):
         
         if found_section:
             current_section = found_section
-            # Usualmente los headers reales están en la siguiente línea
             if i + 1 < len(rows):
-                # Limpiamos headers vacíos
                 headers = [h.strip() for h in rows[i+1] if h.strip()]
             continue
 
-            
-        # Ignorar líneas que sean repetición de headers o vacías
         if not first_cell or (headers and first_cell == headers[0]):
             continue
 
-        # 2. Procesar datos según la sección actual
         if current_section == "cliente":
             if not data["meta_info"]["cliente"]:
                 vals = [c for c in row if c.strip()]
-                # Asignación segura basada en posición
                 if len(vals) >= 1: data["meta_info"]["cliente"]["nombre"] = vals[0]
                 if len(vals) >= 2: data["meta_info"]["cliente"]["direccion"] = vals[1]
                 if len(vals) >= 3: data["meta_info"]["cliente"]["ciudad"] = vals[2]
@@ -125,36 +91,83 @@ def process_extract(file_path, account_type='debit'):
                         data["meta_info"]["resumen"][keys[idx]] = parse_currency(val)
 
         elif current_section == "transacciones":
-            # Lógica inteligente para filas con columnas desplazadas (comas en descripción)
             non_empty = [c for c in row if c.strip()]
-            
-            # Necesitamos mínimo Fecha, Valor y Saldo
             if len(non_empty) >= 3:
                 fecha = non_empty[0]
-                
-                # Tomamos Saldo y Valor desde el final hacia atrás (Ancla Derecha)
                 saldo = parse_currency(non_empty[-1])
                 valor = parse_currency(non_empty[-2])
-                
-                # Todo lo que hay en el medio es la descripción
                 desc_parts = non_empty[1:-2]
                 descripcion = " ".join(desc_parts)
                 
+                # Check if ignored
+                is_ignored = False
+                if ignore_keywords:
+                    is_ignored = any(k.lower() in descripcion.lower() for k in ignore_keywords)
+
                 data["transacciones"].append({
                     "fecha": fecha,
                     "descripcion": descripcion,
                     "valor": valor,
-                    "saldo": saldo
+                    "saldo": saldo,
+                    "ignored": is_ignored
                 })
+
+    # Recalculate totals based on filtered transactions
+    # Bancolombia summary section is often static, so we override it to match our 'ignored' reality
+    if ignore_keywords:
+        # Sum only if NOT ignored
+        total_abonos = sum(t['valor'] for t in data["transacciones"] if t['valor'] > 0 and not t.get('ignored', False))
+        total_cargos = sum(abs(t['valor']) for t in data["transacciones"] if t['valor'] < 0 and not t.get('ignored', False))
+        
+        data["meta_info"]["resumen"]["total_abonos"] = total_abonos
+        data["meta_info"]["resumen"]["total_cargos"] = total_cargos
+        
+        # Recalculate saldo_actual
+        saldo_anterior = data["meta_info"]["resumen"].get("saldo_anterior", 0) or 0
+        data["meta_info"]["resumen"]["saldo_actual"] = saldo_anterior + total_abonos - total_cargos
 
     return data
 
-# Uso del script
+def process_extract(file_path, account_type='debit', analyze_only=False, ignore_keywords=None):
+    # Mapeo de títulos de sección a claves en nuestro JSON
+    sections = {
+        "Información Cliente:": "cliente",
+        "Información General:": "cuenta",
+        "Resumen:": "resumen",
+        "Movimientos:": "transacciones"
+    }
+
+    # Intentar con diferentes encodificaciones
+    encodings = ['utf-8', 'latin-1', 'cp1252']
+    rows = []
+    
+    for enc in encodings:
+        try:
+            with open(file_path, 'r', encoding=enc) as f:
+                reader = csv.reader(f)
+                rows = list(reader)
+            if rows:
+                break
+        except (UnicodeDecodeError, FileNotFoundError):
+            continue
+
+    if analyze_only:
+        # Return only unique transaction descriptions
+        temp_data = process_extract_logic(rows, sections)
+        unique_descriptions = set(t["descripcion"] for t in temp_data["transacciones"])
+        return {"descriptions": sorted(list(unique_descriptions))}
+
+    data = process_extract_logic(rows, sections, ignore_keywords)
+    data["meta_info"]["tipo_cuenta"] = account_type
+    return data
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Procesar extracto de Bancolombia')
     parser.add_argument('--input', type=str, help='Ruta al archivo CSV de entrada')
     parser.add_argument('--output', type=str, help='Ruta al archivo JSON de salida')
     parser.add_argument('--account-type', type=str, default='debit', help='Tipo de cuenta (debit/credit)')
+    parser.add_argument('--analyze', action='store_true', help='Solo analizar descripciones únicas')
+    parser.add_argument('--ignore-keywords', type=str, nargs='*', help='Palabras clave para ignorar transacciones')
     
     args = parser.parse_args()
     
@@ -164,24 +177,20 @@ if __name__ == "__main__":
     # Manejar archivos XLSX
     if archivo_entrada.lower().endswith('.xlsx'):
         csv_convertido = archivo_entrada.rsplit('.', 1)[0] + ".converted.csv"
-        print(f"Detectado archivo Excel. Convirtiendo a CSV: {csv_convertido}")
         try:
             archivo_entrada = convert_xlsx_to_csv(archivo_entrada, csv_convertido)
         except Exception as e:
-            print(f"Error en la conversión: {str(e)}")
             sys.exit(1)
  
     # Asegurar que el directorio de salida existe
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
     try:
-        resultado = process_extract(archivo_entrada, args.account_type)
+        resultado = process_extract(archivo_entrada, args.account_type, args.analyze, args.ignore_keywords)
         
         # Guardar a archivo con ruta especifica
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump(resultado, f, ensure_ascii=False, indent=2)
-        
-        print(f"Éxito: Archivo guardado en {output_file}")
             
     except Exception as e:
         print(f"Error: {str(e)}")

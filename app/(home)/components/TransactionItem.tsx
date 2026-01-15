@@ -6,15 +6,15 @@ interface TransactionItemProps {
   date: string;
   value: number;
   banco?: string;
+  ignored?: boolean;
 }
 
-export function TransactionItem({ description, date, value, banco }: TransactionItemProps) {
+export function TransactionItem({ description, date, value, banco, ignored }: TransactionItemProps) {
   const isIncome = value >= 0;
-
   const isNuBank = banco?.toLowerCase().includes('nu');
 
   return (
-    <div className="group flex items-center justify-between p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 rounded-xl transition-colors">
+    <div className={`group flex items-center justify-between p-4 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 rounded-xl transition-colors ${ignored ? 'opacity-50 grayscale' : ''}`}>
       <div className="flex items-center gap-4">
         <div className="relative">
           <div className={`
@@ -32,7 +32,10 @@ export function TransactionItem({ description, date, value, banco }: Transaction
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="font-medium text-zinc-900 dark:text-zinc-100 line-clamp-1">{description}</span>
+          <span className={`font-medium text-zinc-900 dark:text-zinc-100 line-clamp-1 ${ignored ? 'line-through decoration-zinc-400' : ''}`}>
+            {ignored && <span className="text-xs italic text-zinc-500 mr-2">[Ignorado]</span>}
+            {description}
+          </span>
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-500 dark:text-zinc-400">{date}</span>
             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${isNuBank ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
@@ -41,7 +44,7 @@ export function TransactionItem({ description, date, value, banco }: Transaction
           </div>
         </div>
       </div>
-      <div className={`font-semibold ${isIncome ? 'text-emerald-600 dark:text-emerald-500' : 'text-zinc-900 dark:text-zinc-100'}`}>
+      <div className={`font-semibold ${ignored ? 'text-zinc-400 line-through' : (isIncome ? 'text-emerald-600 dark:text-emerald-500' : 'text-zinc-900 dark:text-zinc-100')}`}>
         {isIncome ? '+' : ''}{formatCurrency(value)}
       </div>
     </div>

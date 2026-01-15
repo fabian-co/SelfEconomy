@@ -49,7 +49,8 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
       const content = JSON.parse(data.content);
 
       const meta = content.meta_info || {};
-      const keywords = meta.payment_keywords || [];
+      // Support both payment_keywords (Nu) and ignore_keywords (Bancolombia)
+      const keywords = meta.payment_keywords || meta.ignore_keywords || [];
       const sourcePath = meta.source_file_path || null;
       const transactions = content.transacciones || [];
 
@@ -183,7 +184,7 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
             )}
 
             <div className="grid gap-3">
-              <Label className="text-sm font-semibold">Configuración de Pagos</Label>
+              <Label className="text-sm font-semibold">Configuración de Reglas (Pagos / Ignorar)</Label>
 
               <div className="flex flex-wrap gap-2 min-h-[40px] p-2 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800">
                 {editForm.keywords.length > 0 ? (

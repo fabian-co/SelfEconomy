@@ -44,13 +44,23 @@ export function FinancialDashboard({ transactions, metaInfo }: FinancialDashboar
       const group = groups.get(monthKey)!;
       group.transactions.push(tx);
 
-      if (tx.valor >= 0) {
-        // Only count as income if it's NOT a credit card payment
-        if (tx.tipo_cuenta !== 'credit') {
-          group.totalIncome += tx.valor;
+      // Sum only if NOT ignored
+      if (!tx.ignored) {
+        const isCredit = tx.tipo_cuenta === 'credit';
+        // Special Logic for Credit Cards: Only sum expenses (negative values)
+        if (isCredit) {
+          if (tx.valor < 0) {
+            group.totalExpense += Math.abs(tx.valor);
+          }
+          // Income (positive) is ignored for Credit Cards summary
+        } else {
+          // Debit / Normal
+          if (tx.valor > 0) {
+            group.totalIncome += tx.valor;
+          } else {
+            group.totalExpense += Math.abs(tx.valor);
+          }
         }
-      } else {
-        group.totalExpense += tx.valor;
       }
     });
 

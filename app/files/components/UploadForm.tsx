@@ -43,6 +43,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   const [step, setStep] = useState<'upload' | 'configure'>('upload');
   const [analysisDescriptions, setAnalysisDescriptions] = useState<string[]>([]);
   const [selectedPayments, setSelectedPayments] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [uploadedFilePath, setUploadedFilePath] = useState<string | null>(null);
 
   const {
@@ -111,6 +112,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
         body: JSON.stringify({
           filePath: uploadResult.path,
           password: values.password,
+          bank: values.bank,
+          accountType: values.accountType,
           action: 'analyze'
         }),
       });
@@ -138,6 +141,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
           filePath: filePath,
           password: password,
           paymentKeywords: paymentKeywords,
+          bank: selectedBank,
+          accountType: selectedAccountType,
           action: 'process'
         }),
       });
@@ -162,6 +167,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
       setStep('upload');
       setAnalysisDescriptions([]);
       setSelectedPayments([]);
+      setSearchTerm("");
       setUploadedFilePath(null);
     }, 300);
   };
@@ -175,8 +181,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   };
 
   const onSubmit = async (values: UploadFormValues) => {
-    // If NuBank Credit Card, analyze first
-    if (selectedBank === 'nu' && selectedAccountType === 'credit') {
+    // If NuBank Credit Card OR Bancolombia Debit, analyze first
+    if ((selectedBank === 'nu' && selectedAccountType === 'credit') || (selectedBank === 'bancolombia' && selectedAccountType === 'debit')) {
       await handleAnalysis(values);
     } else {
       // Normal flow
@@ -301,12 +307,12 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
                 {isUploading ? (
                   <>
                     <Loader2Icon className="h-5 w-5 animate-spin" />
-                    {(selectedBank === 'nu' && selectedAccountType === 'credit') ? 'Analizando...' : 'Subiendo...'}
+                    {((selectedBank === 'nu' && selectedAccountType === 'credit') || (selectedBank === 'bancolombia' && selectedAccountType === 'debit')) ? 'Analizando...' : 'Subiendo...'}
                   </>
                 ) : (
                   <>
-                    {(selectedBank === 'nu' && selectedAccountType === 'credit') ? <SearchIcon className="h-5 w-5" /> : <UploadIcon className="h-5 w-5" />}
-                    {(selectedBank === 'nu' && selectedAccountType === 'credit') ? 'Analizar Archivo' : 'Subir y Procesar'}
+                    {((selectedBank === 'nu' && selectedAccountType === 'credit') || (selectedBank === 'bancolombia' && selectedAccountType === 'debit')) ? <SearchIcon className="h-5 w-5" /> : <UploadIcon className="h-5 w-5" />}
+                    {((selectedBank === 'nu' && selectedAccountType === 'credit') || (selectedBank === 'bancolombia' && selectedAccountType === 'debit')) ? 'Analizar Archivo' : 'Subir y Procesar'}
                   </>
                 )}
               </button>
@@ -315,7 +321,22 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
         ) : (
           <div className="flex flex-col gap-4 py-4">
             <div className="bg-blue-50 dark:bg-blue-950/30 p-4 rounded-xl text-sm text-blue-600 dark:text-blue-400">
-              Selecciona las transacciones que correspondan a <strong>pagos a la tarjeta</strong>. Estas se registrarán como valores positivos.
+              {selectedBank === 'bancolombia' ? (
+                <>Selecciona las transacciones que deseas <strong>ignorar</strong> (ej: pagos de tarjeta). Estas no se incluirán en el reporte.</>
+              ) : (
+                <>Selecciona las transacciones que correspondan a <strong>pagos a la tarjeta</strong>. Estas se registrarán como valores positivos.</>
+              )}
+            </div>
+
+            {/* Search Bar */}
+            <div className="relative">
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+              <Input
+                placeholder="Buscar transacción..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 rounded-xl bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
+              />
             </div>
 
             {selectedPayments.length > 0 && (
@@ -336,21 +357,28 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
 
             <ScrollArea className="h-[300px] w-full rounded-xl border p-4">
               <div className="space-y-4">
-                {analysisDescriptions.map((desc, i) => (
-                  <div key={i} className="flex items-start space-x-3 p-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-lg transition-colors">
-                    <Checkbox
-                      id={`desc-${i}`}
-                      checked={selectedPayments.includes(desc)}
-                      onCheckedChange={() => togglePayment(desc)}
-                    />
-                    <label
-                      htmlFor={`desc-${i}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer pt-0.5"
-                    >
-                      {desc}
-                    </label>
+                {analysisDescriptions
+                  .filter(desc => desc.toLowerCase().includes(searchTerm.toLowerCase()))
+                  .map((desc, i) => (
+                    <div key={i} className="flex items-start space-x-3 p-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-lg transition-colors">
+                      <Checkbox
+                        id={`desc-${i}`}
+                        checked={selectedPayments.includes(desc)}
+                        onCheckedChange={() => togglePayment(desc)}
+                      />
+                      <label
+                        htmlFor={`desc-${i}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer pt-0.5"
+                      >
+                        {desc}
+                      </label>
+                    </div>
+                  ))}
+                {analysisDescriptions.filter(desc => desc.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+                  <div className="text-center py-10 text-zinc-400 text-sm">
+                    No se encontraron coincidencias
                   </div>
-                ))}
+                )}
               </div>
             </ScrollArea>
 

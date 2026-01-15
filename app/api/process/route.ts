@@ -8,33 +8,34 @@ const execAsync = promisify(exec);
 
 export async function POST(request: Request) {
   try {
-    const { filePath, password, action, paymentKeywords, outputName } = await request.json();
+    let { filePath, password, action, paymentKeywords, outputName, bank, accountType } = await request.json();
 
     if (!filePath) {
       return NextResponse.json({ error: 'Missing filePath' }, { status: 400 });
     }
 
     // Absolute path to the source file
-    // The filePath received can be relative to app/api/extracto (new uploads)
-    // or absolute (re-processing from stored source_file_path)
     const sourcePath = path.isAbsolute(filePath)
       ? filePath
       : path.join(process.cwd(), 'app', 'api', 'extracto', filePath);
 
-    // Detect bank and account type based on path
+    // Detect bank and account type based on path if not provided
     const normalizedPath = filePath.toLowerCase().replace(/\\/g, '/');
 
-    let bank = 'other';
-    let accountType = 'debit';
-
-    if (normalizedPath.includes('/nu/')) {
-      bank = 'nu';
-    } else if (normalizedPath.includes('/bancolombia/')) {
-      bank = 'bancolombia';
+    if (!bank) {
+      bank = 'other';
+      if (normalizedPath.includes('nu')) {
+        bank = 'nu';
+      } else if (normalizedPath.includes('bancolombia')) {
+        bank = 'bancolombia';
+      }
     }
 
-    if (normalizedPath.includes('/credit/')) {
-      accountType = 'credit';
+    if (!accountType) {
+      accountType = 'debit';
+      if (normalizedPath.includes('credit')) {
+        accountType = 'credit';
+      }
     }
 
     let scriptName = 'bancolombia.py';
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     const scriptPath = path.join(process.cwd(), 'app', 'api', 'py', scriptName);
     const pythonPath = path.join(process.cwd(), 'venv', 'Scripts', 'python.exe');
 
-    // Recalculate JSON directly if source PDF is missing or requested
+    // Recalculate JSON directly if source PDF/CSV is missing or requested
     if (action === 'recalculate_json') {
       const jsonFileName = outputName || path.basename(filePath, path.extname(filePath));
       const jsonPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', `${jsonFileName}.json`);
@@ -56,32 +57,65 @@ export async function POST(request: Request) {
       try {
         const content = await fs.promises.readFile(jsonPath, 'utf-8');
         const data = JSON.parse(content);
+        const isBancolombia = data.meta_info.banco === 'Bancolombia';
 
         // Update keywords
-        data.meta_info.payment_keywords = paymentKeywords || [];
+        if (isBancolombia) {
+          data.meta_info.ignore_keywords = paymentKeywords || [];
+        } else {
+          data.meta_info.payment_keywords = paymentKeywords || [];
+        }
 
         // Recalculate transactions and totals
         let totalAbonos = 0;
         let totalCargos = 0;
 
+        // Filter out ignored transactions for Bancolombia FIRST
+        if (isBancolombia) {
+          const ignoreList = paymentKeywords || [];
+
+          data.transacciones = data.transacciones.map((t: any) => {
+            const isIgnored = ignoreList.some((k: string) =>
+              t.descripcion.toLowerCase().includes(k.toLowerCase())
+            );
+            return { ...t, ignored: isIgnored };
+          });
+        }
+
         data.transacciones = data.transacciones.map((t: any) => {
-          const isPayment = (paymentKeywords || []).some((k: string) =>
-            t.descripcion.toLowerCase().includes(k.toLowerCase())
-          );
+          // NuBank Logic
+          if (!isBancolombia) {
+            const isPayment = (paymentKeywords || []).some((k: string) =>
+              t.descripcion.toLowerCase().includes(k.toLowerCase())
+            );
+            const absVal = Math.abs(t.valor);
+            const newVal = isPayment ? absVal : -absVal;
 
-          // Force absolute value and then apply sign
-          const absVal = Math.abs(t.valor);
-          const newVal = isPayment ? absVal : -absVal;
+            if (newVal > 0) totalAbonos += newVal;
+            else totalCargos += Math.abs(newVal);
 
-          if (newVal > 0) totalAbonos += newVal;
-          else totalCargos += Math.abs(newVal);
-
-          return { ...t, valor: newVal };
+            return { ...t, valor: newVal };
+          } else {
+            // Bancolombia Logic
+            // Only sum if NOT ignored
+            if (!t.ignored) {
+              if (t.valor > 0) totalAbonos += t.valor;
+              else totalCargos += Math.abs(t.valor);
+            }
+            return t;
+          }
         });
 
         data.meta_info.resumen.total_abonos = totalAbonos;
         data.meta_info.resumen.total_cargos = totalCargos;
-        data.meta_info.resumen.saldo_actual = totalAbonos - totalCargos;
+
+        // Recalculate saldo_actual
+        if (isBancolombia) {
+          const saldoAnterior = data.meta_info.resumen.saldo_anterior || 0;
+          data.meta_info.resumen.saldo_actual = saldoAnterior + totalAbonos - totalCargos;
+        } else {
+          data.meta_info.resumen.saldo_actual = totalAbonos - totalCargos;
+        }
 
         await fs.promises.writeFile(jsonPath, JSON.stringify(data, null, 2));
         return NextResponse.json({ success: true, message: 'JSON recalculado correctamente' });
@@ -104,14 +138,19 @@ export async function POST(request: Request) {
       command += ` --password "${password}"`;
     }
 
-    if (action === 'analyze' && scriptName === 'nu.py') {
+    if (action === 'analyze' && (scriptName === 'nu.py' || scriptName === 'bancolombia.py')) {
       command += ' --analyze';
     }
 
     if (paymentKeywords && Array.isArray(paymentKeywords) && paymentKeywords.length > 0) {
       // Escape keywords for command line
       const keywordsStr = paymentKeywords.map((k: string) => `"${k}"`).join(' ');
-      command += ` --payment-keywords ${keywordsStr}`;
+
+      if (bank === 'nu') {
+        command += ` --payment-keywords ${keywordsStr}`;
+      } else if (bank === 'bancolombia') {
+        command += ` --ignore-keywords ${keywordsStr}`;
+      }
     }
 
     const { stdout, stderr } = await execAsync(command);
