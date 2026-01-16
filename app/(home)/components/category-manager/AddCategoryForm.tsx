@@ -19,7 +19,7 @@ interface AddCategoryFormProps {
 export function AddCategoryForm({ name, setName, icon, setIcon, color, setColor }: AddCategoryFormProps) {
 
   return (
-    <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+    <div className="space-y-4">
       <div className="space-y-2">
         <label className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
           Nueva Categoría

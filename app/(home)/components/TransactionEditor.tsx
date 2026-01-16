@@ -16,7 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { SearchInput } from "@/components/ui/SearchInput";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { IconMap } from "./category-manager/constants";
-import { Plus, ChevronDown, Tag } from "lucide-react";
+import { Plus, ChevronDown, Tag, X } from "lucide-react";
 
 interface TransactionEditorProps {
   description: string;
@@ -253,7 +253,18 @@ export function TransactionEditor({ description, originalDescription, categoryId
           </div>
 
           {isAddingCategory && (
-            <div className="bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
+            <div className="relative bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setIsAddingCategory(false);
+                  setSelectedCategoryId(categoryId || "");
+                }}
+                className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:bg-zinc-100 dark:hover:bg-zinc-800 z-10"
+              >
+                <X className="h-3 w-3 text-zinc-500" />
+              </Button>
               <AddCategoryForm
                 name={newName}
                 setName={setNewName}
@@ -262,17 +273,6 @@ export function TransactionEditor({ description, originalDescription, categoryId
                 color={newColor}
                 setColor={setNewColor}
               />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setIsAddingCategory(false);
-                  setSelectedCategoryId(categoryId || "");
-                }}
-                className="w-full mt-2 text-zinc-500 text-xs hover:bg-transparent"
-              >
-                Cancelar creación
-              </Button>
             </div>
           )}
 
