@@ -1,0 +1,80 @@
+[
+  {
+    "id": "sueldo",
+    "name": "Sueldo",
+    "icon": "Wallet",
+    "color": "#10b981"
+  },
+  {
+    "id": "prestamo",
+    "name": "Préstamo",
+    "icon": "Handshake",
+    "color": "#f59e0b"
+  },
+  {
+    "id": "entretenimiento",
+    "name": "Entretenimiento",
+    "icon": "Gamepad",
+    "color": "#ec4899"
+  },
+  {
+    "id": "viajes",
+    "name": "Viajes",
+    "icon": "Plane",
+    "color": "#0ea5e9"
+  },
+  {
+    "id": "hogar",
+    "name": "Hogar",
+    "icon": "Home",
+    "color": "#8b5cf6"
+  },
+  {
+    "id": "trabajo",
+    "name": "Trabajo",
+    "icon": "Briefcase",
+    "color": "#6366f1"
+  },
+  {
+    "id": "remesa",
+    "name": "Remesa",
+    "icon": "Send",
+    "color": "#f97316"
+  },
+  {
+    "id": "comidas_fuera",
+    "name": "Comidas por fuera",
+    "icon": "Utensils",
+    "color": "#ef4444"
+  },
+  {
+    "id": "transporte",
+    "name": "Transporte",
+    "icon": "Car",
+    "color": "#64748b"
+  },
+  {
+    "id": "salud",
+    "name": "Salud",
+    "icon": "HeartPulse",
+    "color": "#14b8a6"
+  },
+  {
+    "id": "educacion",
+    "name": "Educación",
+    "icon": "GraduationCap",
+    "color": "#a855f7"
+  },
+  {
+    "id": "otros",
+    "name": "Otros",
+    "icon": "MoreHorizontal",
+    "color": "#3f3f46"
+  },
+  {
+    "id": "intereses_bancolombia",
+    "name": "Intereses Bancolombia",
+    "icon": "BarChart2",
+    "color": "#10b981"
+  }
+]

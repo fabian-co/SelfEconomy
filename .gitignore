@@ -43,5 +43,8 @@ next-env.d.ts
 # extracto
 app/api/extracto/processed/*.json
 
+# constants
+constants/category-rules.json
+
 # virtual environment
 venv

@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 const CATEGORIES_PATH = path.join(process.cwd(), 'constants', 'categories.json');
+const CONSTANTS_DIR = path.join(process.cwd(), 'constants');
 
 export async function GET() {
   try {
@@ -25,6 +26,9 @@ export async function POST(request: Request) {
     }
 
     let categories = [];
+    if (!fs.existsSync(CONSTANTS_DIR)) {
+      fs.mkdirSync(CONSTANTS_DIR, { recursive: true });
+    }
     if (fs.existsSync(CATEGORIES_PATH)) {
       const content = fs.readFileSync(CATEGORIES_PATH, 'utf8');
       categories = JSON.parse(content);
@@ -56,6 +60,9 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'ID and Name are required' }, { status: 400 });
     }
 
+    if (!fs.existsSync(CONSTANTS_DIR)) {
+      fs.mkdirSync(CONSTANTS_DIR, { recursive: true });
+    }
     if (!fs.existsSync(CATEGORIES_PATH)) {
       return NextResponse.json({ error: 'Categories file not found' }, { status: 404 });
     }
