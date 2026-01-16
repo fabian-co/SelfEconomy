@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2Icon, CheckIcon, XIcon, SearchIcon } from "lucide-react";
+import { Loader2Icon, CheckIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { RuleConfiguration } from "./RuleConfiguration";
 

@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Search, Tag } from "lucide-react";
+import { Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { IconMap, ICON_NAMES } from "./constants";
 
 interface IconPickerProps {
@@ -39,15 +39,11 @@ export function IconPicker({
       </PopoverTrigger>
       <PopoverContent className="w-64 p-3 rounded-2xl shadow-xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950" align="start">
         <div className="space-y-3">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
-            <Input
-              placeholder="Buscar icono..."
-              className="pl-9 h-9 rounded-xl text-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+          <SearchInput
+            placeholder="Buscar icono..."
+            value={search}
+            onChange={setSearch}
+          />
           <ScrollArea className="h-48">
             <div className="grid grid-cols-5 gap-2 pr-2">
               {filteredIcons.map((name) => {

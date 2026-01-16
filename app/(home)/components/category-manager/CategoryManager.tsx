@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Tag, Loader2, Search } from "lucide-react";
+import { Tag, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { toast } from "sonner";
 import { CategoryItem, Category } from "./CategoryItem";
 import { AddCategoryForm } from "./AddCategoryForm";
@@ -104,15 +105,11 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
         </div>
 
         <div className="p-6 bg-white dark:bg-zinc-950 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
-            <Input
-              placeholder="Buscar categorías..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9 h-10 rounded-xl border-zinc-200 dark:border-zinc-800"
-            />
-          </div>
+          <SearchInput
+            placeholder="Buscar categorías..."
+            value={search}
+            onChange={setSearch}
+          />
 
           <ScrollArea className="h-[280px] pr-2">
             {isLoading ? (

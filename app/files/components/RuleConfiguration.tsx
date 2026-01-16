@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { SearchIcon, XIcon } from "lucide-react";
+import { XIcon } from "lucide-react";
+import { SearchInput } from "@/components/ui/SearchInput";
 
 interface RuleConfigurationProps {
   bank: string;
@@ -65,15 +65,11 @@ export function RuleConfiguration({
       )}
 
       {/* Search Bar */}
-      <div className="relative">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-        <Input
-          placeholder="Buscar transacción..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9 rounded-xl bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800"
-        />
-      </div>
+      <SearchInput
+        placeholder="Buscar transacción..."
+        value={searchTerm}
+        onChange={setSearchTerm}
+      />
 
       {/* Transaction List */}
       <ScrollArea className="h-[300px] w-full rounded-xl border p-4">
