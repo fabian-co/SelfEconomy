@@ -70,5 +70,10 @@
     "name": "Otros",
     "icon": "MoreHorizontal",
     "color": "#3f3f46"
+  },
+  {
+    "id": "intereses_bancolombia",
+    "name": "Intereses Bancolombia",
+    "icon": "BarChart2"
   }
 ]

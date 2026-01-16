@@ -19,6 +19,19 @@ export default function Home() {
     },
   };
 
+  const rulesPath = path.join(process.cwd(), "constants/category-rules.json");
+  const categoriesPath = path.join(process.cwd(), "constants/categories.json");
+
+  let categoryRules: Record<string, any> = {};
+  let categories: any[] = [];
+
+  if (fs.existsSync(rulesPath)) {
+    categoryRules = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
+  }
+  if (fs.existsSync(categoriesPath)) {
+    categories = JSON.parse(fs.readFileSync(categoriesPath, 'utf8'));
+  }
+
   if (fs.existsSync(processedDir)) {
     const files = fs.readdirSync(processedDir).filter(f => f.endsWith('.json'));
 
@@ -31,11 +44,30 @@ export default function Home() {
         const bankName = data.meta_info?.banco || "Bancolombia";
         const accountType = data.meta_info?.tipo_cuenta || "debit";
 
-        const transactionsWithSource = data.transacciones.map((tx: any) => ({
-          ...tx,
-          banco: bankName,
-          tipo_cuenta: accountType
-        }));
+        const transactionsWithSource = data.transacciones.map((tx: any) => {
+          const originalDescription = tx.descripcion;
+          const rule = categoryRules[originalDescription];
+
+          let description = tx.descripcion;
+          let categoryId = tx.categoryId;
+          let categoryName = tx.categoryName;
+
+          if (rule) {
+            description = rule.title || description;
+            categoryId = rule.categoryId;
+            categoryName = rule.categoryName;
+          }
+
+          return {
+            ...tx,
+            originalDescription, // Keep the original for future edits
+            descripcion: description,
+            banco: bankName,
+            tipo_cuenta: accountType,
+            categoryId,
+            categoryName
+          };
+        });
 
         allTransactions = [...allTransactions, ...transactionsWithSource];
 

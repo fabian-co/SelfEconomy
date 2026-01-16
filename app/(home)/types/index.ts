@@ -1,11 +1,14 @@
 export interface Transaction {
   fecha: string;
   descripcion: string;
+  originalDescription?: string;
   valor: number;
   saldo?: number;
   ignored?: boolean;
   banco?: string;
   tipo_cuenta?: string;
+  categoryId?: string;
+  categoryName?: string;
 }
 
 export interface MetaInfo {

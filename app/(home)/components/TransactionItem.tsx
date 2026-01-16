@@ -1,16 +1,32 @@
 import { formatCurrency } from "@/lib/utils";
-import { ArrowDownIcon, ArrowUpIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, Tag } from "lucide-react";
+import { TransactionEditor } from "./TransactionEditor";
 
 interface TransactionItemProps {
   description: string;
+  originalDescription?: string;
   date: string;
   value: number;
   banco?: string;
   accountType?: string;
   ignored?: boolean;
+  categoryId?: string;
+  categoryName?: string;
+  onUpdate: (data: any) => Promise<void>;
 }
 
-export function TransactionItem({ description, date, value, banco, accountType, ignored }: TransactionItemProps) {
+export function TransactionItem({
+  description,
+  originalDescription,
+  date,
+  value,
+  banco,
+  accountType,
+  ignored,
+  categoryId,
+  categoryName,
+  onUpdate
+}: TransactionItemProps) {
   const isIncome = value >= 0;
   const isNuBank = banco?.toLowerCase().includes('nu');
 
@@ -35,10 +51,18 @@ export function TransactionItem({ description, date, value, banco, accountType, 
           </div>
         </div>
         <div id="transaction-item-info" className="flex flex-col gap-1">
-          <span className={`font-medium text-zinc-900 dark:text-zinc-100 line-clamp-1 ${ignored ? 'line-through decoration-zinc-400' : ''}`}>
-            {ignored && <span className="text-xs italic text-zinc-500 mr-2">[Ignorado]</span>}
-            {description}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`font-medium text-zinc-900 dark:text-zinc-100 line-clamp-1 ${ignored ? 'line-through decoration-zinc-400' : ''}`}>
+              {ignored && <span className="text-xs italic text-zinc-500 mr-2">[Ignorado]</span>}
+              {description}
+            </span>
+            {categoryName && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">
+                <Tag className="h-2.5 w-2.5" />
+                {categoryName}
+              </span>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-zinc-500 dark:text-zinc-400">{date}</span>
             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${isNuBank ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'}`}>
@@ -47,8 +71,16 @@ export function TransactionItem({ description, date, value, banco, accountType, 
           </div>
         </div>
       </div>
-      <div id="transaction-item-value" className={`font-semibold ${ignored ? 'text-zinc-400 line-through' : (isIncome ? 'text-emerald-600 dark:text-emerald-500' : 'text-zinc-900 dark:text-zinc-100')}`}>
-        {isIncome ? '+' : ''}{formatCurrency(value)}
+      <div id="transaction-item-right" className="flex items-center gap-4">
+        <div id="transaction-item-value" className={`font-semibold ${ignored ? 'text-zinc-400 line-through' : (isIncome ? 'text-emerald-600 dark:text-emerald-500' : 'text-zinc-900 dark:text-zinc-100')}`}>
+          {isIncome ? '+' : ''}{formatCurrency(value)}
+        </div>
+        <TransactionEditor
+          description={description}
+          categoryId={categoryId}
+          categoryName={categoryName}
+          onSave={onUpdate}
+        />
       </div>
     </div>
   );
