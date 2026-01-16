@@ -33,11 +33,15 @@ export function TransactionList({
   // "uncategorized" is expanded by default as requested.
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["uncategorized"]));
 
-  useEffect(() => {
+  const fetchCategories = () => {
     fetch("/api/categories")
       .then(res => res.json())
       .then(setCategories)
       .catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchCategories();
   }, []);
 
   const categorizedGroups = useMemo(() => {
@@ -79,6 +83,7 @@ export function TransactionList({
       body: JSON.stringify(data),
     });
     if (res.ok) {
+      fetchCategories();
       router.refresh();
     }
   };
