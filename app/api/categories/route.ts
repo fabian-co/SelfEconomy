@@ -37,6 +37,7 @@ export async function POST(request: Request) {
       id,
       name: newCategory.name,
       icon: newCategory.icon || 'Tag',
+      color: newCategory.color || '#3f3f46',
     };
 
     categories.push(categoryToAdd);
@@ -67,7 +68,12 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Category not found' }, { status: 404 });
     }
 
-    categories[index] = { ...categories[index], name: updatedCategory.name, icon: updatedCategory.icon || categories[index].icon };
+    categories[index] = {
+      ...categories[index],
+      name: updatedCategory.name,
+      icon: updatedCategory.icon || categories[index].icon,
+      color: updatedCategory.color || categories[index].color
+    };
     fs.writeFileSync(CATEGORIES_PATH, JSON.stringify(categories, null, 2));
 
     return NextResponse.json(categories[index]);

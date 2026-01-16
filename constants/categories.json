@@ -74,6 +74,7 @@
   {
     "id": "intereses_bancolombia",
     "name": "Intereses Bancolombia",
-    "icon": "BarChart2"
+    "icon": "BarChart2",
+    "color": "#10b981"
   }
 ]
