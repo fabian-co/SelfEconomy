@@ -7,7 +7,7 @@ import { GroupedTransaction } from "../types/index";
 import { PlusCircle, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import { CategoryManager } from "./CategoryManager";
+import { CategoryManager } from "./category-manager/CategoryManager";
 
 interface TransactionListProps {
   currentGroup?: GroupedTransaction;
