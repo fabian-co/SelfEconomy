@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Tag, Pencil, Trash2, Loader2 } from "lucide-react";
+import { Tag, Pencil, Trash2, Loader2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { IconPicker } from "./IconPicker";
@@ -60,7 +60,7 @@ export function CategoryItem({
             disabled={isSubmitting || !editName.trim()}
             className="h-8 w-8 p-0 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
           >
-            {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : "G"}
+            {isSubmitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
           </Button>
           <Button
             size="sm"
@@ -68,7 +68,7 @@ export function CategoryItem({
             onClick={() => setIsEditing(false)}
             className="h-8 w-8 p-0 rounded-lg shrink-0"
           >
-            X
+            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
