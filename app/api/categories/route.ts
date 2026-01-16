@@ -3,15 +3,35 @@ import fs from 'fs';
 import path from 'path';
 
 const CATEGORIES_PATH = path.join(process.cwd(), 'constants', 'categories.json');
-const CONSTANTS_DIR = path.join(process.cwd(), 'constants');
+const CUSTOM_CATEGORIES_DIR = path.join(process.cwd(), 'custom-data', 'categories');
+const CUSTOM_CATEGORIES_PATH = path.join(CUSTOM_CATEGORIES_DIR, 'custom-categories.json');
+
+function readJsonFile(filePath: string) {
+  if (!fs.existsSync(filePath)) return [];
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(content);
+  } catch (e) {
+    console.error(`Error reading ${filePath}:`, e);
+    return [];
+  }
+}
+
+function writeJsonFile(filePath: string, data: any) {
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+}
 
 export async function GET() {
   try {
-    if (!fs.existsSync(CATEGORIES_PATH)) {
-      return NextResponse.json([], { status: 200 });
-    }
-    const content = fs.readFileSync(CATEGORIES_PATH, 'utf8');
-    return NextResponse.json(JSON.parse(content));
+    const defaultCategories = readJsonFile(CATEGORIES_PATH);
+    const customCategories = readJsonFile(CUSTOM_CATEGORIES_PATH);
+
+    // Combine both, but ensure custom categories take precedence or are just appended
+    return NextResponse.json([...defaultCategories, ...customCategories]);
   } catch (error) {
     return NextResponse.json({ error: 'Failed to read categories' }, { status: 500 });
   }
@@ -25,14 +45,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    let categories = [];
-    if (!fs.existsSync(CONSTANTS_DIR)) {
-      fs.mkdirSync(CONSTANTS_DIR, { recursive: true });
-    }
-    if (fs.existsSync(CATEGORIES_PATH)) {
-      const content = fs.readFileSync(CATEGORIES_PATH, 'utf8');
-      categories = JSON.parse(content);
-    }
+    const customCategories = readJsonFile(CUSTOM_CATEGORIES_PATH);
 
     // Generate ID from name if not provided
     const id = newCategory.id || newCategory.name.toLowerCase().replace(/\s+/g, '_');
@@ -44,8 +57,8 @@ export async function POST(request: Request) {
       color: newCategory.color || '#3f3f46',
     };
 
-    categories.push(categoryToAdd);
-    fs.writeFileSync(CATEGORIES_PATH, JSON.stringify(categories, null, 2));
+    customCategories.push(categoryToAdd);
+    writeJsonFile(CUSTOM_CATEGORIES_PATH, customCategories);
 
     return NextResponse.json(categoryToAdd);
   } catch (error) {
@@ -60,30 +73,25 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'ID and Name are required' }, { status: 400 });
     }
 
-    if (!fs.existsSync(CONSTANTS_DIR)) {
-      fs.mkdirSync(CONSTANTS_DIR, { recursive: true });
+    // We only allow updating custom categories for now to keep defaults "immutable" via API
+    // Or we check both. Let's check both for safety, but usually POST adds to custom.
+
+    let customCategories = readJsonFile(CUSTOM_CATEGORIES_PATH);
+    const customIndex = customCategories.findIndex((c: any) => c.id === updatedCategory.id);
+
+    if (customIndex !== -1) {
+      customCategories[customIndex] = {
+        ...customCategories[customIndex],
+        ...updatedCategory
+      };
+      writeJsonFile(CUSTOM_CATEGORIES_PATH, customCategories);
+      return NextResponse.json(customCategories[customIndex]);
     }
-    if (!fs.existsSync(CATEGORIES_PATH)) {
-      return NextResponse.json({ error: 'Categories file not found' }, { status: 404 });
-    }
 
-    const content = fs.readFileSync(CATEGORIES_PATH, 'utf8');
-    let categories = JSON.parse(content);
-
-    const index = categories.findIndex((c: any) => c.id === updatedCategory.id);
-    if (index === -1) {
-      return NextResponse.json({ error: 'Category not found' }, { status: 404 });
-    }
-
-    categories[index] = {
-      ...categories[index],
-      name: updatedCategory.name,
-      icon: updatedCategory.icon || categories[index].icon,
-      color: updatedCategory.color || categories[index].color
-    };
-    fs.writeFileSync(CATEGORIES_PATH, JSON.stringify(categories, null, 2));
-
-    return NextResponse.json(categories[index]);
+    // If not in custom, maybe it's in default? (Though user wants to keep defaults separate)
+    // If we want to allow "overriding" defaults, we'd need more complex logic.
+    // For now, let's just error if not found in custom (since POST only goes to custom).
+    return NextResponse.json({ error: 'Category not found in custom categories' }, { status: 404 });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update category' }, { status: 500 });
   }
@@ -98,22 +106,17 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 });
     }
 
-    if (!fs.existsSync(CATEGORIES_PATH)) {
-      return NextResponse.json({ error: 'Categories file not found' }, { status: 404 });
+    let customCategories = readJsonFile(CUSTOM_CATEGORIES_PATH);
+    const filteredCategories = customCategories.filter((c: any) => c.id !== id);
+
+    if (customCategories.length === filteredCategories.length) {
+      return NextResponse.json({ error: 'Category not found in custom categories' }, { status: 404 });
     }
 
-    const content = fs.readFileSync(CATEGORIES_PATH, 'utf8');
-    let categories = JSON.parse(content);
-
-    const filteredCategories = categories.filter((c: any) => c.id !== id);
-    if (categories.length === filteredCategories.length) {
-      return NextResponse.json({ error: 'Category not found' }, { status: 404 });
-    }
-
-    fs.writeFileSync(CATEGORIES_PATH, JSON.stringify(filteredCategories, null, 2));
-
+    writeJsonFile(CUSTOM_CATEGORIES_PATH, filteredCategories);
     return NextResponse.json({ message: 'Category deleted successfully' });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to delete category' }, { status: 500 });
   }
 }
+

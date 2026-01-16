@@ -21,6 +21,7 @@ export default function Home() {
 
   const rulesPath = path.join(process.cwd(), "constants/category-rules.json");
   const categoriesPath = path.join(process.cwd(), "constants/categories.json");
+  const customCategoriesPath = path.join(process.cwd(), "custom-data/categories/custom-categories.json");
 
   let categoryRules: Record<string, any> = {};
   let categories: any[] = [];
@@ -28,9 +29,18 @@ export default function Home() {
   if (fs.existsSync(rulesPath)) {
     categoryRules = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
   }
+
+  // Load default categories
   if (fs.existsSync(categoriesPath)) {
     categories = JSON.parse(fs.readFileSync(categoriesPath, 'utf8'));
   }
+
+  // Load and merge custom categories
+  if (fs.existsSync(customCategoriesPath)) {
+    const customCats = JSON.parse(fs.readFileSync(customCategoriesPath, 'utf8'));
+    categories = [...categories, ...customCats];
+  }
+
 
   if (fs.existsSync(processedDir)) {
     const files = fs.readdirSync(processedDir).filter(f => f.endsWith('.json'));

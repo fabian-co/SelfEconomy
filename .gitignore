@@ -48,3 +48,6 @@ constants/category-rules.json
 
 # virtual environment
 venv
+
+# custom data
+custom-data/
