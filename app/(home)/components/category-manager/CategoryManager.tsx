@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Tag, Loader2 } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Tag, Loader2, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { CategoryItem, Category } from "./CategoryItem";
@@ -16,6 +17,7 @@ interface CategoryManagerProps {
 export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [search, setSearch] = useState("");
 
   const fetchCategories = async () => {
     setIsLoading(true);
@@ -80,6 +82,12 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
     }
   };
 
+  const filteredCategories = useMemo(() => {
+    return [...categories]
+      .filter(cat => cat.name.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [categories, search]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
@@ -95,15 +103,25 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
           </p>
         </div>
 
-        <div className="p-6 bg-white dark:bg-zinc-950 space-y-6">
-          <ScrollArea className="h-[300px] pr-2">
+        <div className="p-6 bg-white dark:bg-zinc-950 space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-zinc-400" />
+            <Input
+              placeholder="Buscar categorías..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-10 rounded-xl border-zinc-200 dark:border-zinc-800"
+            />
+          </div>
+
+          <ScrollArea className="h-[280px] pr-2">
             {isLoading ? (
               <div className="flex justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-zinc-300" />
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-2">
-                {categories.map((cat) => (
+                {filteredCategories.map((cat) => (
                   <CategoryItem
                     key={cat.id}
                     category={cat}
@@ -111,6 +129,11 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
                     onDelete={handleDeleteCategory}
                   />
                 ))}
+                {filteredCategories.length === 0 && !isLoading && (
+                  <div className="text-center py-8 text-zinc-500 text-sm">
+                    No se encontraron categorías
+                  </div>
+                )}
               </div>
             )}
           </ScrollArea>
