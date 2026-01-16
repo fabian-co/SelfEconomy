@@ -28,7 +28,8 @@ export function TransactionList({
   const router = useRouter();
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  // Use a set of expanded IDs instead of collapsed for easier "collapsed by default" logic
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch("/api/categories")
@@ -50,10 +51,12 @@ export function TransactionList({
           id: catId,
           name: category?.name || (catId === "uncategorized" ? "Sin Categoría" : "Desconocida"),
           color: category?.color || "#71717a",
-          transactions: []
+          transactions: [],
+          total: 0
         };
       }
       groups[catId].transactions.push(tx);
+      groups[catId].total += tx.valor;
     });
 
     // Sort categories: Uncategorized last, others alphabetical? 
@@ -78,7 +81,12 @@ export function TransactionList({
   };
 
   const toggleGroup = (id: string) => {
-    setCollapsedGroups(prev => ({ ...prev, [id]: !prev[id] }));
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   if (!currentGroup) {
@@ -134,14 +142,20 @@ export function TransactionList({
                 <span className="font-bold text-sm uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
                   {group.name}
                   <span className="ml-2 text-xs font-normal lowercase text-zinc-400">
-                    ({group.transactions.length} movimientos)
+                    ({group.transactions.length})
                   </span>
                 </span>
               </div>
-              {collapsedGroups[group.id] ? <ChevronRight className="h-4 w-4 text-zinc-400" /> : <ChevronDown className="h-4 w-4 text-zinc-400" />}
+
+              <div className="flex items-center gap-4">
+                <span className={`text-sm font-bold ${group.total >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                  {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(group.total)}
+                </span>
+                {expandedGroups.has(group.id) ? <ChevronDown className="h-4 w-4 text-zinc-400" /> : <ChevronRight className="h-4 w-4 text-zinc-400" />}
+              </div>
             </button>
 
-            {!collapsedGroups[group.id] && (
+            {expandedGroups.has(group.id) && (
               <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {group.transactions.map((tx: any, index: number) => (
                   <TransactionItem
