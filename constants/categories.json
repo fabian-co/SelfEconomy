@@ -1,0 +1,62 @@
+[
+  {
+    "id": "sueldo",
+    "name": "Sueldo",
+    "icon": "Wallet"
+  },
+  {
+    "id": "prestamo",
+    "name": "Préstamo",
+    "icon": "Handshake"
+  },
+  {
+    "id": "entretenimiento",
+    "name": "Entretenimiento",
+    "icon": "Gamepad"
+  },
+  {
+    "id": "viajes",
+    "name": "Viajes",
+    "icon": "Plane"
+  },
+  {
+    "id": "hogar",
+    "name": "Hogar",
+    "icon": "Home"
+  },
+  {
+    "id": "trabajo",
+    "name": "Trabajo",
+    "icon": "Briefcase"
+  },
+  {
+    "id": "remesa",
+    "name": "Remesa",
+    "icon": "Send"
+  },
+  {
+    "id": "comidas_fuera",
+    "name": "Comidas por fuera",
+    "icon": "Utensils"
+  },
+  {
+    "id": "transporte",
+    "name": "Transporte",
+    "icon": "Car"
+  },
+  {
+    "id": "salud",
+    "name": "Salud",
+    "icon": "HeartPulse"
+  },
+  {
+    "id": "educacion",
+    "name": "Educación",
+    "icon": "GraduationCap"
+  },
+  {
+    "id": "otros",
+    "name": "Otros",
+    "icon": "MoreHorizontal"
+  }
+]

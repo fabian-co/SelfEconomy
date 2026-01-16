@@ -40,8 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-Extracto/
-*.json
+# extracto
+app/api/extracto/processed/*.json
 
 # virtual environment
 venv
