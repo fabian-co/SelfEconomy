@@ -44,7 +44,7 @@ export function IconPicker({
             value={search}
             onChange={setSearch}
           />
-          <ScrollArea className="h-48">
+          <ScrollArea className="h-48" onWheel={(e) => e.stopPropagation()}>
             <div className="grid grid-cols-5 gap-2 pr-2">
               {filteredIcons.map((name) => {
                 const Icon = IconMap[name];
