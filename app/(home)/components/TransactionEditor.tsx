@@ -37,6 +37,9 @@ export function TransactionEditor({ description, originalDescription, categoryId
   const [applyGlobally, setApplyGlobally] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newIcon, setNewIcon] = useState("Tag");
+  const [newColor, setNewColor] = useState("#3f3f46");
   const router = useRouter();
 
   // Sync state when props change or dialog opens
@@ -56,29 +59,14 @@ export function TransactionEditor({ description, originalDescription, categoryId
     }
   }, [open]);
 
-  const handleCreateCategory = async (name: string, icon: string, color: string) => {
-    try {
-      const res = await fetch("/api/categories", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, icon, color }),
-      });
-      if (!res.ok) throw new Error("Failed to add");
-      const added = await res.json();
-      setCategories(prev => [...prev, added]);
-      setSelectedCategoryId(added.id);
-      setIsAddingCategory(false);
-      toast.success(`Categoría "${added.name}" creada`);
-      router.refresh();
-    } catch (error) {
-      toast.error("No se pudo crear la categoría");
-    }
-  };
-
   const handleValueChange = (value: string) => {
     if (value === "__new__") {
       setIsAddingCategory(true);
+      setNewName("");
+      setNewIcon("Tag");
+      setNewColor("#3f3f46");
     } else {
+      setIsAddingCategory(false);
       setSelectedCategoryId(value);
     }
   };
@@ -88,16 +76,45 @@ export function TransactionEditor({ description, originalDescription, categoryId
 
     setIsSubmitting(true);
     try {
-      const selectedCategory = categories.find(c => c.id === selectedCategoryId);
+      let finalCategoryId = selectedCategoryId;
+      let finalCategoryName = "";
+
+      if (isAddingCategory) {
+        if (!newName.trim()) {
+          toast.error("El nombre de la categoría es obligatorio");
+          setIsSubmitting(false);
+          return;
+        }
+
+        const res = await fetch("/api/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newName, icon: newIcon, color: newColor }),
+        });
+
+        if (!res.ok) throw new Error("Failed to create category");
+        const added = await res.json();
+        finalCategoryId = added.id;
+        finalCategoryName = added.name;
+        // Update local list for future use
+        setCategories(prev => [...prev, added]);
+      } else {
+        const selectedCategory = categories.find(c => c.id === selectedCategoryId);
+        finalCategoryName = selectedCategory?.name || "";
+      }
+
       await onSave({
         originalDescription: originalDescription || description,
         description: editDescription,
-        categoryId: selectedCategoryId,
-        categoryName: selectedCategory?.name || "",
+        categoryId: finalCategoryId,
+        categoryName: finalCategoryName,
         applyGlobally
       });
+
       setOpen(false);
+      setIsAddingCategory(false);
       toast.success("Transacción actualizada");
+      router.refresh();
     } catch (error) {
       toast.error("Error al guardar cambios");
     } finally {
@@ -163,12 +180,22 @@ export function TransactionEditor({ description, originalDescription, categoryId
 
           {isAddingCategory && (
             <div className="bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
-              <AddCategoryForm onAdd={handleCreateCategory} />
+              <AddCategoryForm
+                name={newName}
+                setName={setNewName}
+                icon={newIcon}
+                setIcon={setNewIcon}
+                color={newColor}
+                setColor={setNewColor}
+              />
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsAddingCategory(false)}
-                className="w-full mt-2 text-zinc-500 text-xs"
+                onClick={() => {
+                  setIsAddingCategory(false);
+                  setSelectedCategoryId(categoryId || "");
+                }}
+                className="w-full mt-2 text-zinc-500 text-xs hover:bg-transparent"
               >
                 Cancelar creación
               </Button>
