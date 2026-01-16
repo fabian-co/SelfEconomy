@@ -19,7 +19,7 @@ export default function Home() {
     },
   };
 
-  const rulesPath = path.join(process.cwd(), "constants/category-rules.json");
+  const rulesPath = path.join(process.cwd(), "custom-data/rules/category-rules.json");
   const categoriesPath = path.join(process.cwd(), "constants/categories.json");
   const customCategoriesPath = path.join(process.cwd(), "custom-data/categories/custom-categories.json");
 

@@ -2,12 +2,12 @@ import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-const RULES_PATH = path.join(process.cwd(), "constants/category-rules.json");
-const CONSTANTS_DIR = path.join(process.cwd(), "constants");
+const RULES_PATH = path.join(process.cwd(), "custom-data/rules/category-rules.json");
+const RULES_DIR = path.join(process.cwd(), "custom-data/rules");
 
 function getRules() {
-  if (!fs.existsSync(CONSTANTS_DIR)) {
-    fs.mkdirSync(CONSTANTS_DIR, { recursive: true });
+  if (!fs.existsSync(RULES_DIR)) {
+    fs.mkdirSync(RULES_DIR, { recursive: true });
   }
   if (!fs.existsSync(RULES_PATH)) {
     fs.writeFileSync(RULES_PATH, JSON.stringify({}));
