@@ -29,7 +29,8 @@ export function TransactionList({
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   // Use a set of expanded IDs instead of collapsed for easier "collapsed by default" logic
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  // "uncategorized" is expanded by default as requested.
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["uncategorized"]));
 
   useEffect(() => {
     fetch("/api/categories")
