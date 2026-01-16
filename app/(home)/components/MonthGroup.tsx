@@ -13,9 +13,10 @@ interface MonthGroupProps {
   transactions: Transaction[];
   totalIncome: number;
   totalExpense: number;
+  onUpdate: (data: any) => Promise<void>;
 }
 
-export function MonthGroup({ monthName, year, transactions, totalIncome, totalExpense }: MonthGroupProps) {
+export function MonthGroup({ monthName, year, transactions, totalIncome, totalExpense, onUpdate }: MonthGroupProps) {
   return (
     <div className="flex flex-col gap-2">
       <div className="sticky top-0 z-10 flex items-center justify-between bg-white/80 py-4 backdrop-blur-md dark:bg-black/80">
@@ -33,10 +34,11 @@ export function MonthGroup({ monthName, year, transactions, totalIncome, totalEx
       <div className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800 border border-zinc-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-950 overflow-hidden shadow-sm">
         {transactions.map((tx, index) => (
           <TransactionItem
-            key={`${tx.fecha}-${index}`}
+            key={`${tx.fecha}-${tx.descripcion}-${tx.valor}-${index}`}
             description={tx.descripcion}
             date={tx.fecha}
             value={tx.valor}
+            onUpdate={onUpdate}
           />
         ))}
       </div>

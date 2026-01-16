@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { Tag, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,6 +20,7 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const router = useRouter();
 
   const fetchCategories = async () => {
     setIsLoading(true);
@@ -50,6 +52,7 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
       const added = await res.json();
       setCategories([...categories, added]);
       toast.success(`Categoría "${added.name}" creada`);
+      router.refresh();
     } catch (error) {
       toast.error("No se pudo crear la categoría");
     }
@@ -66,6 +69,7 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
       const updated = await res.json();
       setCategories(categories.map(c => c.id === id ? updated : c));
       toast.success("Categoría actualizada");
+      router.refresh();
     } catch (error) {
       toast.error("Error al actualizar");
     }
@@ -78,6 +82,7 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
       if (!res.ok) throw new Error("Failed to delete");
       setCategories(categories.filter(c => c.id !== id));
       toast.success("Categoría eliminada");
+      router.refresh();
     } catch (error) {
       toast.error("Error al eliminar");
     }

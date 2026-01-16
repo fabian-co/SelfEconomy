@@ -160,7 +160,7 @@ export function TransactionList({
               <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {group.transactions.map((tx: any, index: number) => (
                   <TransactionItem
-                    key={`${tx.fecha}-${index}`}
+                    key={`${tx.fecha}-${tx.descripcion}-${tx.valor}-${index}`}
                     description={tx.descripcion}
                     originalDescription={tx.originalDescription}
                     date={tx.fecha}

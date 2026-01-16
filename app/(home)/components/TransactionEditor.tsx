@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Pencil, Loader2, Check } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Category } from "./category-manager/CategoryItem";
+import { AddCategoryForm } from "./category-manager/AddCategoryForm";
+import { Plus } from "lucide-react";
 
 interface TransactionEditorProps {
   description: string;
@@ -33,6 +36,16 @@ export function TransactionEditor({ description, originalDescription, categoryId
   const [selectedCategoryId, setSelectedCategoryId] = useState(categoryId || "");
   const [applyGlobally, setApplyGlobally] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const router = useRouter();
+
+  // Sync state when props change or dialog opens
+  useEffect(() => {
+    if (open) {
+      setEditDescription(description);
+      setSelectedCategoryId(categoryId || "");
+    }
+  }, [open, description, categoryId]);
 
   useEffect(() => {
     if (open) {
@@ -42,6 +55,33 @@ export function TransactionEditor({ description, originalDescription, categoryId
         .catch(() => toast.error("Error al cargar categorías"));
     }
   }, [open]);
+
+  const handleCreateCategory = async (name: string, icon: string, color: string) => {
+    try {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, icon, color }),
+      });
+      if (!res.ok) throw new Error("Failed to add");
+      const added = await res.json();
+      setCategories(prev => [...prev, added]);
+      setSelectedCategoryId(added.id);
+      setIsAddingCategory(false);
+      toast.success(`Categoría "${added.name}" creada`);
+      router.refresh();
+    } catch (error) {
+      toast.error("No se pudo crear la categoría");
+    }
+  };
+
+  const handleValueChange = (value: string) => {
+    if (value === "__new__") {
+      setIsAddingCategory(true);
+    } else {
+      setSelectedCategoryId(value);
+    }
+  };
 
   const handleSave = async () => {
     if (!editDescription.trim()) return;
@@ -98,7 +138,7 @@ export function TransactionEditor({ description, originalDescription, categoryId
             <Label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
               Categoría
             </Label>
-            <Select value={selectedCategoryId} onValueChange={setSelectedCategoryId}>
+            <Select value={selectedCategoryId} onValueChange={handleValueChange}>
               <SelectTrigger className="rounded-xl border-zinc-200 dark:border-zinc-800">
                 <SelectValue placeholder="Seleccionar categoría" />
               </SelectTrigger>
@@ -111,9 +151,29 @@ export function TransactionEditor({ description, originalDescription, categoryId
                     </div>
                   </SelectItem>
                 ))}
+                <SelectItem value="__new__" className="text-blue-600 dark:text-blue-400 font-medium border-t border-zinc-100 dark:border-zinc-800 mt-1">
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Crear nueva categoría...
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {isAddingCategory && (
+            <div className="bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
+              <AddCategoryForm onAdd={handleCreateCategory} />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsAddingCategory(false)}
+                className="w-full mt-2 text-zinc-500 text-xs"
+              >
+                Cancelar creación
+              </Button>
+            </div>
+          )}
 
           <div className="flex items-center space-x-2 bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800">
             <Checkbox

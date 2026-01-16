@@ -76,5 +76,35 @@
     "name": "Intereses Bancolombia",
     "icon": "BarChart2",
     "color": "#10b981"
+  },
+  {
+    "id": "in-line_category",
+    "name": "Pagos a la tarjeta",
+    "icon": "Settings",
+    "color": "#ef4444"
+  },
+  {
+    "id": "pago_cooperativa",
+    "name": "Pago Cooperativa",
+    "icon": "Tag",
+    "color": "#ef4444"
+  },
+  {
+    "id": "chandis",
+    "name": "Chandis",
+    "icon": "Star",
+    "color": "#ec4899"
+  },
+  {
+    "id": "deudas",
+    "name": "Deudas",
+    "icon": "TrendingDown",
+    "color": "#8b5cf6"
+  },
+  {
+    "id": "refresh_test",
+    "name": "Refresh Test",
+    "icon": "Tag",
+    "color": "#3f3f46"
   }
 ]
