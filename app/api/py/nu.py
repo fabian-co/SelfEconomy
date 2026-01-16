@@ -44,15 +44,51 @@ def process_nu_pdf(file_path, password=None, account_type='debit', analyze_only=
                         all_text += text + "\n"
                 
                 lines = all_text.split('\n')
+                current_tx_desc = None
+                desc_line_count = 0
+                
+                TX_REGEX = r'^(\d{1,2}\s+[A-Z]{3}|\d{1,2}/\d{1,2}(?:/\d{2,4})?)\s+(.+?)\s+((\$|[-+])?\s*[\d.]+,\d{2})'
+                STOP_KEYWORDS = ["Fecha", "Descripción", "Valor", "Cuotas", "Interés", "Total a pagar", "Página", "NIT", "Nu Financiera", "Extracto"]
+                
                 for line in lines:
-                    match = re.search(r'^(\d{1,2}\s+[A-Z]{3}|\d{1,2}/\d{1,2}(?:/\d{2,4})?)\s+(.+?)\s+((\$|[-+])?\s*[\d.]+,\d{2})', line.strip())
+                    line = line.strip()
+                    if not line: continue
+                    
+                    if " - " in line and re.search(r'[A-Z]{3}.* - .*[A-Z]{3}', line):
+                        continue
+                        
+                    match = re.search(TX_REGEX, line)
                     if match:
-                        desc = match.group(2).strip()
-                        # Ignore ranges or headers
-                        if " - " in line and re.search(r'[A-Z]{3}.* - .*[A-Z]{3}', line):
-                            continue
-                        desc = desc.rstrip('$').strip()
+                        desc = match.group(2).strip().rstrip('$').strip()
                         unique_descriptions.add(desc)
+                        current_tx_desc = desc
+                        desc_line_count = 1
+                    elif current_tx_desc and desc_line_count < 3:
+                        # Stop if any stop keyword is found
+                        if any(k.lower() in line.lower() for k in STOP_KEYWORDS):
+                            current_tx_desc = None
+                            continue
+                            
+                        # Skip sub-details or lines with currency that aren't new transactions
+                        if line.startswith('↳') or 'A capital' in line or 'A intereses' in line or re.search(r'(\$|[-+])?\s*[\d.]+,\d{2}', line):
+                            current_tx_desc = None
+                            continue
+
+                        year_match = re.match(r'^(\d{4})\s+(.*)', line)
+                        if year_match:
+                            extra = year_match.group(2).strip()
+                            if extra:
+                                if current_tx_desc in unique_descriptions:
+                                    unique_descriptions.remove(current_tx_desc)
+                                current_tx_desc = f"{current_tx_desc} {extra}".strip()
+                                unique_descriptions.add(current_tx_desc)
+                                desc_line_count += 1
+                        else:
+                            if current_tx_desc in unique_descriptions:
+                                unique_descriptions.remove(current_tx_desc)
+                            current_tx_desc = f"{current_tx_desc} {line}".strip()
+                            unique_descriptions.add(current_tx_desc)
+                            desc_line_count += 1
                         
         except Exception as e:
             raise Exception(f"Error analizando PDF de NuBank: {str(e)}")
@@ -90,59 +126,98 @@ def process_nu_pdf(file_path, password=None, account_type='debit', analyze_only=
                 data["meta_info"]["cliente"]["nombre"] = name_match.group(1).strip()
 
             lines = all_text.split('\n')
+            temp_transactions = []
+            current_tx = None
+            desc_line_count = 0
+            
+            TX_REGEX = r'^(\d{1,2}\s+[A-Z]{3}|\d{1,2}/\d{1,2}(?:/\d{2,4})?)\s+(.+?)\s+((\$|[-+])?\s*[\d.]+,\d{2})'
+            STOP_KEYWORDS = ["Fecha", "Descripción", "Valor", "Cuotas", "Interés", "Total a pagar", "Página", "NIT", "Nu Financiera", "Extracto"]
+            
             for line in lines:
-                match = re.search(r'^(\d{1,2}\s+[A-Z]{3}|\d{1,2}/\d{1,2}(?:/\d{2,4})?)\s+(.+?)\s+((\$|[-+])?\s*[\d.]+,\d{2})', line.strip())
+                line = line.strip()
+                if not line: continue
                 
+                if " - " in line and re.search(r'[A-Z]{3}.* - .*[A-Z]{3}', line):
+                    continue
+                
+                match = re.search(TX_REGEX, line)
                 if match:
-                    fecha = match.group(1).strip()
-                    desc = match.group(2).strip()
-                    valor_str = match.group(3).strip()
+                    if current_tx:
+                        temp_transactions.append(current_tx)
                     
-                    if " - " in line and re.search(r'[A-Z]{3}.* - .*[A-Z]{3}', line):
+                    current_tx = {
+                        "fecha": match.group(1).strip(),
+                        "descripcion": match.group(2).strip().rstrip('$').strip(),
+                        "valor_str": match.group(3).strip()
+                    }
+                    desc_line_count = 1
+                elif current_tx and desc_line_count < 3:
+                    # Check stop keywords
+                    if any(k.lower() in line.lower() for k in STOP_KEYWORDS):
+                        temp_transactions.append(current_tx)
+                        current_tx = None
                         continue
-                    
-                    desc = desc.rstrip('$').strip()
-                    
-                    valor = parse_currency(valor_str)
-                    if valor is not None:
-                        month_map = {
-                            'ENE': '01', 'FEB': '02', 'MAR': '03', 'ABR': '04',
-                            'MAY': '05', 'JUN': '06', 'JUL': '07', 'AGO': '08',
-                            'SEP': '09', 'OCT': '10', 'NOV': '11', 'DIC': '12'
-                        }
-                        for m_name, m_num in month_map.items():
-                            if m_name in fecha.upper():
-                                fecha = f"{fecha.split()[0]}/{m_num}"
-                                break
 
-                        # Determinate if it is a payment based on keywords
-                        is_payment = False
-                        if payment_keywords and len(payment_keywords) > 0:
-                            # User provided keywords (partial match logic)
-                            is_payment = any(k.lower() in desc.lower() for k in payment_keywords)
-                        else:
-                            # If no keywords provided for credit card, we don't assume anything as payment
-                            # except for debit accounts where we might have different logic (handled by sign)
-                            is_payment = False
-                       
-                        if not is_payment:
-                            valor = -abs(valor)
-                        else:
-                            valor = abs(valor)
+                    # Skip sub-details or lines with currency that aren't new transactions
+                    if line.startswith('↳') or 'A capital' in line or 'A intereses' in line or re.search(r'(\$|[-+])?\s*[\d.]+,\d{2}', line):
+                        temp_transactions.append(current_tx)
+                        current_tx = None
+                        continue
 
-                        data["transacciones"].append({
-                            "fecha": fecha,
-                            "descripcion": desc,
-                            "valor": valor,
-                            "saldo": 0,
-                            "ignored": is_payment
-                        })
-                        
-                        if not is_payment:
-                            if valor > 0:
-                                data["meta_info"]["resumen"]["total_abonos"] += valor
-                            else:
-                                data["meta_info"]["resumen"]["total_cargos"] += abs(valor)
+                    year_match = re.match(r'^(\d{4})\s+(.*)', line)
+                    if year_match:
+                        extra = year_match.group(2).strip()
+                        if extra:
+                            current_tx["descripcion"] = f"{current_tx['descripcion']} {extra}".strip()
+                            desc_line_count += 1
+                    else:
+                        current_tx["descripcion"] = f"{current_tx['descripcion']} {line}".strip()
+                        desc_line_count += 1
+
+            if current_tx:
+                temp_transactions.append(current_tx)
+
+            for tx_data in temp_transactions:
+                fecha = tx_data["fecha"]
+                desc = tx_data["descripcion"]
+                valor_str = tx_data["valor_str"]
+                
+                valor = parse_currency(valor_str)
+                if valor is not None:
+                    month_map = {
+                        'ENE': '01', 'FEB': '02', 'MAR': '03', 'ABR': '04',
+                        'MAY': '05', 'JUN': '06', 'JUL': '07', 'AGO': '08',
+                        'SEP': '09', 'OCT': '10', 'NOV': '11', 'DIC': '12'
+                    }
+                    for m_name, m_num in month_map.items():
+                        if m_name in fecha.upper():
+                            fecha = f"{fecha.split()[0]}/{m_num}"
+                            break
+
+                    # Determinate if it is a payment based on keywords
+                    is_payment = False
+                    if payment_keywords and len(payment_keywords) > 0:
+                        # User provided keywords (partial match logic)
+                        is_payment = any(k.lower() in desc.lower() for k in payment_keywords)
+                   
+                    if not is_payment:
+                        valor = -abs(valor)
+                    else:
+                        valor = abs(valor)
+
+                    data["transacciones"].append({
+                        "fecha": fecha,
+                        "descripcion": desc,
+                        "valor": valor,
+                        "saldo": 0,
+                        "ignored": is_payment
+                    })
+                    
+                    if not is_payment:
+                        if valor > 0:
+                            data["meta_info"]["resumen"]["total_abonos"] += valor
+                        else:
+                            data["meta_info"]["resumen"]["total_cargos"] += abs(valor)
 
             data["meta_info"]["resumen"]["saldo_actual"] = data["meta_info"]["resumen"]["total_abonos"] - data["meta_info"]["resumen"]["total_cargos"]
 
