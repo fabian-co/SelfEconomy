@@ -1,6 +1,7 @@
 import { formatCurrency } from "@/lib/utils";
 import { ArrowDownIcon, ArrowUpIcon, Tag } from "lucide-react";
 import { TransactionEditor } from "./TransactionEditor";
+import { IconMap } from "./category-manager/constants";
 
 interface TransactionItemProps {
   description: string;
@@ -12,6 +13,7 @@ interface TransactionItemProps {
   ignored?: boolean;
   categoryId?: string;
   categoryName?: string;
+  categoryIcon?: string;
   onUpdate: (data: any) => Promise<void>;
 }
 
@@ -25,10 +27,13 @@ export function TransactionItem({
   ignored,
   categoryId,
   categoryName,
+  categoryIcon,
   onUpdate
 }: TransactionItemProps) {
   const isIncome = value >= 0;
   const isNuBank = banco?.toLowerCase().includes('nu');
+
+  const IconComp = (categoryIcon && IconMap[categoryIcon]) || Tag;
 
   const formattedAccountType = accountType === 'credit' ? 'Crédito' : 'Débito';
 
@@ -57,8 +62,8 @@ export function TransactionItem({
               {description}
             </span>
             {categoryName && (
-              <span className="inline-flex items-center gap-1 text-[10px] font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">
-                <Tag className="h-2.5 w-2.5" />
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 px-2 py-0.5 rounded-full border border-blue-100 dark:border-blue-800">
+                <IconComp className="h-3 w-3" />
                 {categoryName}
               </span>
             )}

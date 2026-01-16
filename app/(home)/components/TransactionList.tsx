@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CategoryManager } from "./category-manager/CategoryManager";
 import { useRouter } from "next/navigation";
 import { Category } from "./category-manager/CategoryItem";
+import { IconMap } from "./category-manager/constants";
 
 interface TransactionListProps {
   currentGroup?: GroupedTransaction;
@@ -51,6 +52,7 @@ export function TransactionList({
         groups[catId] = {
           id: catId,
           name: category?.name || (catId === "uncategorized" ? "Sin Categoría" : "Desconocida"),
+          icon: category?.icon,
           color: category?.color || "#71717a",
           transactions: [],
           total: 0
@@ -139,7 +141,18 @@ export function TransactionList({
               className="w-full flex items-center justify-between p-4 bg-zinc-50/50 dark:bg-zinc-900/20 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/40 transition-colors border-b border-zinc-100 dark:border-zinc-800"
             >
               <div className="flex items-center gap-3">
-                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: group.color }} />
+                <div
+                  className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+                  style={{
+                    backgroundColor: `${group.color}15`,
+                    color: group.color
+                  }}
+                >
+                  {(() => {
+                    const IconComp = IconMap[group.icon] || Tag;
+                    return <IconComp className="h-4 w-4" />;
+                  })()}
+                </div>
                 <span className="font-bold text-sm uppercase tracking-wider text-zinc-600 dark:text-zinc-400">
                   {group.name}
                   <span className="ml-2 text-xs font-normal lowercase text-zinc-400">
@@ -170,6 +183,7 @@ export function TransactionList({
                     ignored={tx.ignored}
                     categoryId={tx.categoryId}
                     categoryName={tx.categoryName}
+                    categoryIcon={group.icon}
                     onUpdate={handleUpdateTransaction}
                   />
                 ))}
