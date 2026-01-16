@@ -157,102 +157,7 @@ export function TransactionEditor({ description, originalDescription, categoryId
             />
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
-              Categoría
-            </Label>
-            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={popoverOpen}
-                  className="w-full justify-between rounded-xl border-zinc-200 dark:border-zinc-800 font-normal px-3"
-                >
-                  {selectedCategoryId ? (
-                    <div className="flex items-center gap-2">
-                      {(() => {
-                        const cat = categories.find(c => c.id === selectedCategoryId);
-                        const Icon = IconMap[cat?.icon || ""] || Tag;
-                        return (
-                          <>
-                            <div className="h-4 w-4 rounded-full flex items-center justify-center" style={{ color: cat?.color }}>
-                              <Icon className="h-3.5 w-3.5" />
-                            </div>
-                            {cat?.name}
-                          </>
-                        );
-                      })()}
-                    </div>
-                  ) : (
-                    <span className="text-zinc-500">Seleccionar categoría</span>
-                  )}
-                  <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-2xl shadow-xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950" align="start">
-                <div className="p-2 border-b border-zinc-100 dark:border-zinc-800">
-                  <SearchInput
-                    placeholder="Buscar categoría..."
-                    value={catSearch}
-                    onChange={setCatSearch}
-                  />
-                </div>
-                <ScrollArea className="h-60" onWheel={(e) => e.stopPropagation()}>
-                  <div className="p-1">
-                    {categories
-                      .filter(cat => cat.name.toLowerCase().includes(catSearch.toLowerCase()))
-                      .map((cat) => {
-                        const Icon = IconMap[cat.icon] || Tag;
-                        return (
-                          <button
-                            key={cat.id}
-                            className={`
-                              w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors
-                              ${selectedCategoryId === cat.id
-                                ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 font-medium"
-                                : "hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-600 dark:text-zinc-400"}
-                            `}
-                            onClick={() => {
-                              setSelectedCategoryId(cat.id);
-                              setIsAddingCategory(false);
-                              setPopoverOpen(false);
-                              setCatSearch("");
-                            }}
-                          >
-                            <div
-                              className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
-                              style={{ backgroundColor: `${cat.color}15`, color: cat.color }}
-                            >
-                              <Icon className="h-4 w-4" />
-                            </div>
-                            {cat.name}
-                          </button>
-                        );
-                      })}
-                    <button
-                      className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors mt-1 border-t border-zinc-100 dark:border-zinc-800 pt-2"
-                      onClick={() => {
-                        setIsAddingCategory(true);
-                        setNewName("");
-                        setNewIcon("Tag");
-                        setNewColor("#3f3f46");
-                        setPopoverOpen(false);
-                        setCatSearch("");
-                      }}
-                    >
-                      <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
-                        <Plus className="h-4 w-4" />
-                      </div>
-                      Crear nueva categoría...
-                    </button>
-                  </div>
-                </ScrollArea>
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {isAddingCategory && (
+          {isAddingCategory ? (
             <div className="relative bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30">
               <Button
                 variant="ghost"
@@ -273,6 +178,101 @@ export function TransactionEditor({ description, originalDescription, categoryId
                 color={newColor}
                 setColor={setNewColor}
               />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-zinc-500">
+                Categoría
+              </Label>
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={popoverOpen}
+                    className="w-full justify-between rounded-xl border-zinc-200 dark:border-zinc-800 font-normal px-3"
+                  >
+                    {selectedCategoryId ? (
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const cat = categories.find(c => c.id === selectedCategoryId);
+                          const Icon = IconMap[cat?.icon || ""] || Tag;
+                          return (
+                            <>
+                              <div className="h-4 w-4 rounded-full flex items-center justify-center" style={{ color: cat?.color }}>
+                                <Icon className="h-3.5 w-3.5" />
+                              </div>
+                              {cat?.name}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    ) : (
+                      <span className="text-zinc-500">Seleccionar categoría</span>
+                    )}
+                    <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-2xl shadow-xl border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950" align="start">
+                  <div className="p-2 border-b border-zinc-100 dark:border-zinc-800">
+                    <SearchInput
+                      placeholder="Buscar categoría..."
+                      value={catSearch}
+                      onChange={setCatSearch}
+                    />
+                  </div>
+                  <ScrollArea className="h-60" onWheel={(e) => e.stopPropagation()}>
+                    <div className="p-1">
+                      {categories
+                        .filter(cat => cat.name.toLowerCase().includes(catSearch.toLowerCase()))
+                        .map((cat) => {
+                          const Icon = IconMap[cat.icon] || Tag;
+                          return (
+                            <button
+                              key={cat.id}
+                              className={`
+                                w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm transition-colors
+                                ${selectedCategoryId === cat.id
+                                  ? "bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400 font-medium"
+                                  : "hover:bg-zinc-50 dark:hover:bg-zinc-900 text-zinc-600 dark:text-zinc-400"}
+                              `}
+                              onClick={() => {
+                                setSelectedCategoryId(cat.id);
+                                setIsAddingCategory(false);
+                                setPopoverOpen(false);
+                                setCatSearch("");
+                              }}
+                            >
+                              <div
+                                className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0"
+                                style={{ backgroundColor: `${cat.color}15`, color: cat.color }}
+                              >
+                                <Icon className="h-4 w-4" />
+                              </div>
+                              {cat.name}
+                            </button>
+                          );
+                        })}
+                      <button
+                        className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors mt-1 border-t border-zinc-100 dark:border-zinc-800 pt-2"
+                        onClick={() => {
+                          setIsAddingCategory(true);
+                          setNewName("");
+                          setNewIcon("Tag");
+                          setNewColor("#3f3f46");
+                          setPopoverOpen(false);
+                          setCatSearch("");
+                        }}
+                      >
+                        <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
+                          <Plus className="h-4 w-4" />
+                        </div>
+                        Crear nueva categoría...
+                      </button>
+                    </div>
+                  </ScrollArea>
+                </PopoverContent>
+              </Popover>
             </div>
           )}
 
