@@ -5,23 +5,26 @@ import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { IconPicker } from "./IconPicker";
+import { ColorPicker } from "./ColorPicker";
 
 interface AddCategoryFormProps {
-  onAdd: (name: string, icon: string) => Promise<void>;
+  onAdd: (name: string, icon: string, color: string) => Promise<void>;
 }
 
 export function AddCategoryForm({ onAdd }: AddCategoryFormProps) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("Tag");
+  const [color, setColor] = useState("#3f3f46");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
     setIsSubmitting(true);
-    await onAdd(name, icon);
+    await onAdd(name, icon, color);
     setName("");
     setIcon("Tag");
+    setColor("#3f3f46");
     setIsSubmitting(false);
   };
 
@@ -35,6 +38,10 @@ export function AddCategoryForm({ onAdd }: AddCategoryFormProps) {
           <IconPicker
             selectedIcon={icon}
             onSelect={setIcon}
+          />
+          <ColorPicker
+            selectedColor={color}
+            onSelect={setColor}
           />
           <Input
             placeholder="Nombre de la categoría..."

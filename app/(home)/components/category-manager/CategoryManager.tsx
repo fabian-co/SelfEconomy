@@ -36,12 +36,12 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
     }
   }, [open]);
 
-  const handleAddCategory = async (name: string, icon: string) => {
+  const handleAddCategory = async (name: string, icon: string, color: string) => {
     try {
       const res = await fetch("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, icon }),
+        body: JSON.stringify({ name, icon, color }),
       });
       if (!res.ok) throw new Error("Failed to add");
       const added = await res.json();
@@ -52,12 +52,12 @@ export function CategoryManager({ open, onOpenChange }: CategoryManagerProps) {
     }
   };
 
-  const handleUpdateCategory = async (id: string, name: string, icon: string) => {
+  const handleUpdateCategory = async (id: string, name: string, icon: string, color: string) => {
     try {
       const res = await fetch("/api/categories", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, name, icon }),
+        body: JSON.stringify({ id, name, icon, color }),
       });
       if (!res.ok) throw new Error("Failed to update");
       const updated = await res.json();
