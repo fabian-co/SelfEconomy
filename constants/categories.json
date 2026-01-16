@@ -58,5 +58,10 @@
     "id": "otros",
     "name": "Otros",
     "icon": "MoreHorizontal"
+  },
+  {
+    "id": "mascotas",
+    "name": "Mascotas",
+    "icon": "Tag"
   }
 ]
