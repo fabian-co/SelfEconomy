@@ -8,7 +8,7 @@ const execAsync = promisify(exec);
 
 export async function POST(request: Request) {
   try {
-    let { filePath, password, action, paymentKeywords, outputName, bank, accountType } = await request.json();
+    let { filePath, password, action, paymentKeywords, outputName, bank, accountType, data } = await request.json();
 
     if (!filePath) {
       return NextResponse.json({ error: 'Missing filePath' }, { status: 400 });
@@ -47,7 +47,45 @@ export async function POST(request: Request) {
 
     // Script path
     const scriptPath = path.join(process.cwd(), 'app', 'api', 'py', scriptName);
+    const extractScriptPath = path.join(process.cwd(), 'app', 'api', 'py', 'extract_text.py');
     const pythonPath = path.join(process.cwd(), 'venv', 'Scripts', 'python.exe');
+
+    // Action: AI Extract (New AI flow)
+    if (action === 'ai_extract') {
+      const tempTxtPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'temp', `${path.basename(filePath)}.txt`);
+      await fs.promises.mkdir(path.dirname(tempTxtPath), { recursive: true });
+
+      let extractCmd = `"${pythonPath}" "${extractScriptPath}" --input "${sourcePath}" --output "${tempTxtPath}"`;
+      if (password) extractCmd += ` --password "${password}"`;
+
+      try {
+        await execAsync(extractCmd);
+        const textContent = await fs.promises.readFile(tempTxtPath, 'utf-8');
+        // Optionally delete temp file
+        await fs.promises.unlink(tempTxtPath);
+
+        return NextResponse.json({
+          success: true,
+          text: textContent
+        });
+      } catch (err: any) {
+        return NextResponse.json({ error: `Error extrayendo texto: ${err.message}` }, { status: 500 });
+      }
+    }
+
+    // Action: Save JSON (New AI flow)
+    if (action === 'save_json') {
+      const jsonFileName = outputName || path.basename(filePath, path.extname(filePath));
+      const jsonPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', `${jsonFileName}.json`);
+
+      await fs.promises.mkdir(path.dirname(jsonPath), { recursive: true });
+      await fs.promises.writeFile(jsonPath, JSON.stringify(data, null, 2));
+
+      // Delete source file
+      try { await fs.promises.unlink(sourcePath); } catch (e) { }
+
+      return NextResponse.json({ success: true, message: 'Archivo guardado correctamente' });
+    }
 
     // Recalculate JSON directly if source PDF/CSV is missing or requested
     if (action === 'recalculate_json') {

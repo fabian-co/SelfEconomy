@@ -8,14 +8,12 @@ El sistema utiliza un enfoque híbrido donde una aplicación **Next.js 16** act�
 
 ```mermaid
 graph TD
-    A[Frontend / Upload] -->|POST /api/process| B(Orquestador Next.js)
-    B -->|Detecta Banco| C{Router}
-    C -->|Bancolombia| D[Agente Bancolombia]
-    C -->|NuBank| E[Agente NuBank]
-    D -->|CSV/XLSX| F[(Normalización JSON)]
-    E -->|PDF| F
-    F -->|JSON Resultante| B
-    B -->|Respuesta| A
+    A[Frontend / Upload] -->|POST /api/files| B(Orquestador Next.js)
+    B -->|Extracción de Texto| C[Python Text Extractor]
+    C -->|Texto Crudo + Schema| D(Vercel AI SDK / Google AI)
+    D -->|Generación de Script/Lógica| E[Agente Dinámico]
+    E -->|JSON Normalizado| F[(Visualización/Feedback)]
+    F -->|Confirmación Usuario| G[(Base de Datos / JSON)]
 ```
 
 ## 1. El Orquestador (`app/api/process/route.ts`)
@@ -81,16 +79,33 @@ Todos los agentes producen un JSON con la misma estructura, permitiendo que el F
 }
 ```
 
-## 4. Integración de Inteligencia Artificial
+## 4. Normalización Inteligente (AI-Driven)
 
-El proyecto utiliza inteligencia artificial para tareas avanzadas como la categorización automática de transacciones y análisis predictivo.
+En lugar de depender exclusivamente de scripts estáticos, el sistema evoluciona hacia una arquitectura donde la IA genera el "puente" de normalización.
+
+- **Ingesta:** El sistema recibe archivos (PDF, CSV, XLSX) y los convierte a texto plano crudo.
+- **Generación de Plantillas:** La IA analiza una muestra del texto y genera un script de Python o una configuración de mapeo que sigue el **Schema Estándar**.
+- **Schema Estándar de Transacciones:**
+  ```json
+  {
+    "fecha": "DD/MM/AAAA",
+    "descripcion": "Texto limpio",
+    "valor": -1234.50,
+    "ignored": false
+  }
+  ```
+- **Feedback Loop:** Antes de guardar los datos, el usuario valida en la UI (durante el upload) si la interpretación de la IA es correcta (ej: si detectó bien los signos de los montos).
+
+## 5. Integración de Inteligencia Artificial
+
+El proyecto utiliza inteligencia artificial para tareas avanzadas como la categorización automática de transacciones y el generador de plantillas de normalización.
 
 - **Stack Tecnológico:**
   - **Vercel AI SDK:** Utilizado como la capa de abstracción para interactuar con modelos de lenguaje de manera sencilla y eficiente.
   - **Google AI SDK (`@ai-sdk/google`):** El proveedor principal de modelos (como Gemini) para el procesamiento de lenguaje natural.
-- **Configuración:** El sistema ya cuenta con las variables de entorno necesarias configuradas para la autenticación con los servicios de Google AI.
+- **System Prompt de Generación:** El sistema utiliza un prompt especializado que instruye a la IA a actuar como un Ingeniero de Datos para crear agentes de parsing basados en regex y lógica condicional.
 
-## 5. Frontend e Interfaz de Usuario
+## 6. Frontend e Interfaz de Usuario
 
 La interfaz de usuario está construida utilizando **shadcn/ui**, lo que proporciona un conjunto de componentes accesibles y personalizables.
 
