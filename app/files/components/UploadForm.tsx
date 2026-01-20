@@ -160,8 +160,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
           body: JSON.stringify({
             filePath: uploadResult.path,
             password: values.password,
-            bank: values.bank,
-            accountType: values.accountType,
+            bank: values.bank || "",
+            accountType: values.accountType || "",
             action: 'analyze'
           }),
         });
@@ -224,8 +224,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
           filePath: filePath,
           password: password,
           paymentKeywords: paymentKeywords,
-          bank: selectedBank,
-          accountType: selectedAccountType,
+          bank: selectedBank || "",
+          accountType: selectedAccountType || "",
           action: 'process'
         }),
       });
@@ -257,29 +257,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
 
 
   const onSubmit = async (values: UploadFormValues) => {
-    // If NuBank Credit Card OR Bancolombia Debit, analyze first
-    if ((selectedBank === 'nu' && selectedAccountType === 'credit') || (selectedBank === 'bancolombia' && selectedAccountType === 'debit')) {
-      await handleAnalysis(values);
-    } else {
-      // Normal flow
-      setIsUploading(true);
-      const formData = new FormData();
-      formData.append('file', values.file);
-      formData.append('bank', values.bank);
-      formData.append('accountType', values.accountType);
-      formData.append('extractName', values.extractName);
-
-      try {
-        const uploadRes = await fetch('/api/files', { method: 'POST', body: formData });
-        if (!uploadRes.ok) throw new Error((await uploadRes.json()).error);
-        const uploadResult = await uploadRes.json();
-
-        await processFile(uploadResult.path);
-      } catch (error: any) {
-        toast.error(error.message);
-        setIsUploading(false);
-      }
-    }
+    await handleAnalysis(values);
   };
 
   return (
@@ -430,8 +408,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
         ) : (
           <div className="flex flex-col gap-4 py-4">
             <RuleConfiguration
-              bank={selectedBank}
-              accountType={selectedAccountType}
+              bank={selectedBank || ""}
+              accountType={selectedAccountType || ""}
               transactions={analysisDescriptions}
               selectedRules={selectedPayments}
               onRulesChange={setSelectedPayments}

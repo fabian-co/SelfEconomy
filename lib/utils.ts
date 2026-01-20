@@ -15,8 +15,32 @@ export function formatCurrency(amount: number): string {
 }
 
 export function parseTransactionDate(dateStr: string, currentYear: number): Date {
-  // dateStr format is "DD/MM" (e.g., "1/10")
-  const [day, month] = dateStr.split('/').map(Number);
-  // Note: Month in Date constructor is 0-indexed (0-11)
-  return new Date(currentYear, month - 1, day);
+  // Support YYYY-MM-DD (ISO)
+  if (dateStr.includes('-')) {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const [year, month, day] = parts.map(Number);
+      return new Date(year, month - 1, day);
+    }
+  }
+
+  // Support DD/MM/YYYY or DD/MM
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/').map(Number);
+    if (parts.length === 3) {
+      // DD/MM/YYYY
+      const [day, month, year] = parts;
+      return new Date(year, month - 1, day);
+    } else if (parts.length === 2) {
+      // DD/MM
+      const [day, month] = parts;
+      return new Date(currentYear, month - 1, day);
+    }
+  }
+
+  // Fallback to native parsing
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) return parsed;
+
+  return new Date(); // Default safely
 }

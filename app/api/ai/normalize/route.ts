@@ -36,18 +36,23 @@ export async function POST(req: Request) {
       schema: transactionSchema,
       prompt: `Actúa como un experto en análisis financiero. Tu tarea es extraer transacciones de un extracto bancario en texto crudo y convertirlas a un JSON estandarizado.
 
-REQUISITO ADICIONAL: Debes identificar el nombre del BANCO y el TIPO DE CUENTA (credit/debit) basándote en el contenido del texto.
+INSTRUCCIONES DE FECHA (MUY IMPORTANTE):
+1. Detecta el AÑO del extracto (suele estar en el encabezado).
+2. Asegúrate de que TODAS las transacciones tengan una fecha en formato ISO: YYYY-MM-DD.
+3. Si el extracto solo dice "Oct 15", y el año del extracto es 2023, la fecha debe ser "2023-10-15".
+
+REQUISITO DE METADATOS:
+- Debes identificar el nombre del BANCO y el TIPO DE CUENTA (credit/debit) basándote en el contenido del texto.
 
 TEXTO DEL EXTRACTO:
 ${text}
 
-REGLAS CRÍTICAS:
+REGLAS CRÍTICAS DE TRANSACCIÓN:
 1. Identifica la fecha, descripción y valor de cada transacción.
 2. Asegúrate de que los valores sean numéricos.
-3. Los CARGOS/COMPRAS deben ser NEGATIVOS. Los ABONOS/PAGOS deben ser POSITIVOS.
-4. Marca como "ignored: true" aquellas transacciones que sean "PAGOS A TU TARJETA" o transferencias entre cuentas propias para evitar duplicidad en gastos.
-5. Si detectas que el extracto es de Tarjeta de Crédito, el pago mensual de la tarjeta es un ingreso (positivo) pero debe ser ignorado.
-6. Limpia las descripciones de códigos innecesarios o asteriscos si es posible.`,
+3. Los CARGOS/COMPRAS deben ser NEGATIVOS. Los ABONOS/PAGOS deben ser POSITIVOS (excepto si son devoluciones).
+4. Marca como "ignored: true" aquellas transacciones que sean "PAGOS A TU TARJETA" o transferencias entre cuentas propias.
+5. Limpia las descripciones de códigos innecesarios.`,
     });
 
     return NextResponse.json(object);
