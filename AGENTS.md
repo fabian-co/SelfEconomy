@@ -81,7 +81,16 @@ Todos los agentes producen un JSON con la misma estructura, permitiendo que el F
 }
 ```
 
-## 4. Frontend e Interfaz de Usuario
+## 4. Integración de Inteligencia Artificial
+
+El proyecto utiliza inteligencia artificial para tareas avanzadas como la categorización automática de transacciones y análisis predictivo.
+
+- **Stack Tecnológico:**
+  - **Vercel AI SDK:** Utilizado como la capa de abstracción para interactuar con modelos de lenguaje de manera sencilla y eficiente.
+  - **Google AI SDK (`@ai-sdk/google`):** El proveedor principal de modelos (como Gemini) para el procesamiento de lenguaje natural.
+- **Configuración:** El sistema ya cuenta con las variables de entorno necesarias configuradas para la autenticación con los servicios de Google AI.
+
+## 5. Frontend e Interfaz de Usuario
 
 La interfaz de usuario está construida utilizando **shadcn/ui**, lo que proporciona un conjunto de componentes accesibles y personalizables.
 
@@ -90,7 +99,7 @@ La interfaz de usuario está construida utilizando **shadcn/ui**, lo que proporc
 - **Skills Next.js 16:** Consulta [SKILLS.md](skills/nextjs/SKILLS.md) para ver las nuevas características y buenas prácticas de Next.js 16.
 - **Skills Tailwind & Shadcn:** Consulta [SKILL.md](skills/tailwind/SKILL.md) para ver las convenciones de diseño, uso de Shadcn e IDs para depuración.
 
-## 5. Arquitectura del Proyecto (Screaming Architecture)
+## 6. Arquitectura del Proyecto (Screaming Architecture)
 
 El proyecto sigue el principio de **Screaming Architecture**, con el objetivo de que la estructura de carpetas comunique claramente la intención y las funcionalidades del sistema.
 
