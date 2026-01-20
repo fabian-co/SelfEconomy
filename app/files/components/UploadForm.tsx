@@ -51,6 +51,10 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   const [aiData, setAiData] = useState<any>(null);
   const [useAi, setUseAi] = useState(true);
   const [isAiProcessing, setIsAiProcessing] = useState(false);
+  const [detectedTemplate, setDetectedTemplate] = useState<any>(null);
+  const [availableTemplates, setAvailableTemplates] = useState<any[]>([]);
+  const [isTemplatesLoading, setIsTemplatesLoading] = useState(false);
+  const [extractedText, setExtractedText] = useState<string>("");
 
   const {
     register,
@@ -85,6 +89,23 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
         const nameWithoutExt = file.name.split('.').slice(0, -1).join('.');
         setValue("extractName", nameWithoutExt, { shouldValidate: true });
       }
+    }
+  };
+
+  const fetchTemplates = async () => {
+    setIsTemplatesLoading(true);
+    try {
+      const res = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'get_templates' }),
+      });
+      const data = await res.json();
+      setAvailableTemplates(data.templates || []);
+    } catch (error) {
+      console.error("Error fetching templates:", error);
+    } finally {
+      setIsTemplatesLoading(false);
     }
   };
 
@@ -130,25 +151,16 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
           const extractData = await extractRes.json();
           if (!extractRes.ok) throw new Error(extractData.error || 'Error en extracción');
 
-          // Step B: AI Normalize
-          const aiRes = await fetch('/api/ai/normalize', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              text: extractData.text,
-              bank: values.bank || "",
-              accountType: values.accountType || "",
-            }),
-          });
-          const aiNormalizedData = await aiRes.json();
-          if (!aiRes.ok) throw new Error(aiNormalizedData.error || 'Error en IA');
+          setExtractedText(extractData.text);
 
-          setAiData(aiNormalizedData);
-          // Pre-fill bank and accountType if AI detected them
-          if (aiNormalizedData.meta_info.banco) setValue("bank", aiNormalizedData.meta_info.banco);
-          if (aiNormalizedData.meta_info.tipo_cuenta) setValue("accountType", aiNormalizedData.meta_info.tipo_cuenta);
+          if (extractData.matchedTemplate) {
+            setDetectedTemplate(extractData.matchedTemplate);
+            setIsAiProcessing(false);
+            setIsUploading(false);
+            return;
+          }
 
-          setStep('ai_preview');
+          await performAiNormalization(extractData.text, values.bank || "", values.accountType || "");
         } catch (error: any) {
           throw error;
         }
@@ -179,6 +191,69 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
       setIsUploading(false);
       setIsAiProcessing(false);
     }
+  };
+
+  const performAiNormalization = async (text: string, bank: string, accountType: string) => {
+    setIsAiProcessing(true);
+    try {
+      const aiRes = await fetch('/api/ai/normalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          bank,
+          accountType,
+        }),
+      });
+      const aiNormalizedData = await aiRes.json();
+      if (!aiRes.ok) throw new Error(aiNormalizedData.error || 'Error en IA');
+
+      setAiData(aiNormalizedData);
+      if (aiNormalizedData.meta_info.banco) setValue("bank", aiNormalizedData.meta_info.banco);
+      if (aiNormalizedData.meta_info.tipo_cuenta) setValue("accountType", aiNormalizedData.meta_info.tipo_cuenta);
+
+      setStep('ai_preview');
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsAiProcessing(false);
+    }
+  };
+
+  const handleUseTemplate = async () => {
+    if (!detectedTemplate) return;
+    setIsAiProcessing(true);
+    try {
+      const res = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filePath: uploadedFilePath,
+          password: watch("password"),
+          bank: detectedTemplate.entity,
+          accountType: detectedTemplate.account_type,
+          action: 'use_template'
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error usando template');
+
+      setAiData(data);
+      setValue("bank", data.meta_info.banco);
+      setValue("accountType", data.meta_info.tipo_cuenta);
+      setDetectedTemplate(null);
+      setStep('ai_preview');
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsAiProcessing(false);
+    }
+  };
+
+  const handleSkipTemplate = async () => {
+    const text = extractedText;
+    setDetectedTemplate(null);
+    await performAiNormalization(text, watch("bank") || "", watch("accountType") || "");
   };
 
   const handleAiConfirm = async () => {
@@ -252,6 +327,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
       setSelectedPayments([]);
       setUploadedFilePath(null);
       setAiData(null);
+      setDetectedTemplate(null);
+      setAvailableTemplates([]);
     }, 300);
   };
 
@@ -312,6 +389,72 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
               >
                 <div className={`w-4 h-4 bg-white rounded-full transition-transform ${useAi ? 'translate-x-6' : 'translate-x-0'}`} />
               </div>
+            </div>
+
+            {detectedTemplate && (
+              <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-4 rounded-2xl flex flex-col gap-3 animate-in fade-in slide-in-from-top-2">
+                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                  <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                    <CheckIcon className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold">¡Template detectado!</h4>
+                    <p className="text-[10px] opacity-80">Encontramos un patrón para <strong>{detectedTemplate.entity}</strong>.</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleUseTemplate}
+                    disabled={isAiProcessing}
+                    className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2"
+                  >
+                    {isAiProcessing ? <Loader2Icon className="h-3 w-3 animate-spin" /> : "Usar Template"}
+                  </button>
+                  <button
+                    onClick={handleSkipTemplate}
+                    disabled={isAiProcessing}
+                    className="flex-1 py-2 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 text-xs font-bold rounded-lg border border-zinc-200 dark:border-zinc-800 transition-all"
+                  >
+                    Ignorar y usar IA
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Template Library Toggle */}
+            <div className="mt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  if (availableTemplates.length === 0) fetchTemplates();
+                  else setAvailableTemplates([]);
+                }}
+                className="text-[10px] text-zinc-500 hover:text-emerald-500 transition-colors flex items-center gap-1 font-medium"
+              >
+                <SearchIcon className="h-3 w-3" />
+                {availableTemplates.length > 0 ? "Ocultar Librería" : "Ver Librería de Templates"}
+              </button>
+
+              {availableTemplates.length > 0 && (
+                <div className="mt-2 grid gap-2 border border-zinc-100 dark:border-zinc-800 rounded-xl p-2 bg-zinc-50/50 dark:bg-zinc-900/30 max-h-[120px] overflow-y-auto scrollbar-thin">
+                  {availableTemplates.map((tmp, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setDetectedTemplate(tmp);
+                        // If file is already selected, they can click "Usar Template" in the banner
+                      }}
+                      className="text-left p-2 rounded-lg hover:bg-white dark:hover:bg-zinc-950 transition-all border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 group"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">{tmp.entity}</span>
+                        <Badge variant="outline" className="text-[8px] h-4 px-1">{tmp.account_type}</Badge>
+                      </div>
+                      <p className="text-[10px] text-zinc-500 truncate">{tmp.transaction_regex}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="grid gap-2">

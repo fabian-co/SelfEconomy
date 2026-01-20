@@ -38,6 +38,25 @@ export function parseTransactionDate(dateStr: string, currentYear: number): Date
     }
   }
 
+  // Support DD MMM (e.g. 26 JUL)
+  const months: { [key: string]: number } = {
+    'ENE': 0, 'FEB': 1, 'MAR': 2, 'ABR': 3, 'MAY': 4, 'JUN': 5,
+    'JUL': 6, 'AGO': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DIC': 11
+  };
+
+  const cleanStr = dateStr.toUpperCase().trim();
+  const parts = cleanStr.split(/\s+/);
+
+  if (parts.length >= 2) {
+    const day = parseInt(parts[0]);
+    const monthStr = parts[1];
+    const year = parts.length === 3 ? parseInt(parts[2]) : currentYear;
+
+    if (!isNaN(day) && months[monthStr] !== undefined) {
+      return new Date(year, months[monthStr], day);
+    }
+  }
+
   // Fallback to native parsing
   const parsed = new Date(dateStr);
   if (!isNaN(parsed.getTime())) return parsed;

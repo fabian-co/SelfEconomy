@@ -20,7 +20,26 @@ const transactionSchema = z.object({
     valor: z.number(),
     saldo: z.number().optional(),
     ignored: z.boolean(),
-  }))
+  })),
+  template_config: z.object({
+    entity: z.string(),
+    account_type: z.enum(['credit', 'debit']),
+    signature_keywords: z.array(z.string()).describe("3 o 4 palabras únicas y constantes del extracto"),
+    transaction_regex: z.string().describe("Regex con grupos de captura para fecha, descripción y monto"),
+    group_mapping: z.object({
+      date: z.number().describe("Índice del grupo para fecha"),
+      description: z.number().describe("Índice del grupo para descripción"),
+      value: z.number().describe("Índice del grupo para monto (valor)")
+    }),
+    date_format: z.string().describe("Formato de fecha capturado (ej: DD MMM o DD/MM)"),
+    decimal_separator: z.enum(['.', ',']).optional().default(','),
+    thousand_separator: z.enum(['.', ',']).optional().default('.'),
+    rules: z.object({
+      default_negative: z.boolean().describe("true si la mayoría son gastos (ej: TC)"),
+      positive_patterns: z.array(z.string()).describe("Regex para descripciones que son ingresos/abonos"),
+      ignore_patterns: z.array(z.string()).describe("Regex para descripciones que deben ignorarse")
+    }).optional()
+  }).optional()
 });
 
 export async function POST(req: Request) {
@@ -36,23 +55,28 @@ export async function POST(req: Request) {
       schema: transactionSchema,
       prompt: `Actúa como un experto en análisis financiero. Tu tarea es extraer transacciones de un extracto bancario en texto crudo y convertirlas a un JSON estandarizado.
 
-INSTRUCCIONES DE FECHA (MUY IMPORTANTE):
-1. Detecta el AÑO del extracto (suele estar en el encabezado).
-2. Asegúrate de que TODAS las transacciones tengan una fecha en formato ISO: YYYY-MM-DD.
-3. Si el extracto solo dice "Oct 15", y el año del extracto es 2023, la fecha debe ser "2023-10-15".
+INSTRUCCIONES DE FECHA:
+1. Detecta el AÑO del extracto.
+2. Formato ISO: YYYY-MM-DD.
 
-REQUISITO DE METADATOS:
-- Debes identificar el nombre del BANCO y el TIPO DE CUENTA (credit/debit) basándote en el contenido del texto.
+REGLAS DE TRANSACCIÓN:
+1. Identifica fecha, descripción y valor.
+2. CARGOS son NEGATIVOS, ABONOS son POSITIVOS.
+3. Ignora pagos a tarjeta o transferencias internas.
+
+GENERACIÓN DE TEMPLATE (OBLIGATORIO PARA ESCALABILIDAD):
+- Tu objetivo es detectar el PATRÓN de este extracto para procesarlo sin IA en el futuro.
+- Crea un "regex" que capture la línea de transacción completa con 3 grupos: fecha, descripción y valor.
+- Define "rules":
+  - "default_negative": true si la mayoría de transacciones son gastos que no tienen signo menos en el texto (ej: compras en Tarjeta de Crédito).
+  - "positive_patterns": Lista de regex para descripciones que SI son ingresos/abonos (ej: ["PAGO", "ABONO", "GRACIAS POR TU PAGO"]).
+  - "ignore_patterns": Lista de regex para descripciones que deben ignorarse (ej: ["PAGO A TU TARJETA", "INTERESES"]).
+- decimal_separator: "." o "," según el extracto.
+- thousand_separator: "." o "," o "" según el extracto.
+- Identifica 3 o 4 palabras clave constantes (keywords) únicas del banco.
 
 TEXTO DEL EXTRACTO:
-${text}
-
-REGLAS CRÍTICAS DE TRANSACCIÓN:
-1. Identifica la fecha, descripción y valor de cada transacción.
-2. Asegúrate de que los valores sean numéricos.
-3. Los CARGOS/COMPRAS deben ser NEGATIVOS. Los ABONOS/PAGOS deben ser POSITIVOS (excepto si son devoluciones).
-4. Marca como "ignored: true" aquellas transacciones que sean "PAGOS A TU TARJETA" o transferencias entre cuentas propias.
-5. Limpia las descripciones de códigos innecesarios.`,
+${text}`,
     });
 
     return NextResponse.json(object);
