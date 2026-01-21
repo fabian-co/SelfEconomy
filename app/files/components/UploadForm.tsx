@@ -55,6 +55,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   const [availableTemplates, setAvailableTemplates] = useState<any[]>([]);
   const [isTemplatesLoading, setIsTemplatesLoading] = useState(false);
   const [extractedText, setExtractedText] = useState<string>("");
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const {
     register,
@@ -111,6 +112,9 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
 
   const handleAnalysis = async (values: UploadFormValues) => {
     setIsUploading(true);
+    const controller = new AbortController();
+    setAbortController(controller);
+
     const formData = new FormData();
     formData.append('file', values.file);
     formData.append('bank', values.bank ?? "");
@@ -122,6 +126,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
       const uploadRes = await fetch('/api/files', {
         method: 'POST',
         body: formData,
+        signal: controller.signal
       });
 
       if (!uploadRes.ok) {
@@ -147,6 +152,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
               accountType: values.accountType || "",
               action: 'ai_extract'
             }),
+            signal: controller.signal
           });
           const extractData = await extractRes.json();
           if (!extractRes.ok) throw new Error(extractData.error || 'Error en extracción');
@@ -160,7 +166,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             return;
           }
 
-          await performAiNormalization(extractData.text, values.bank || "", values.accountType || "");
+          await performAiNormalization(extractData.text, values.bank || "", values.accountType || "", controller.signal);
         } catch (error: any) {
           throw error;
         }
@@ -176,6 +182,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             accountType: values.accountType || "",
             action: 'analyze'
           }),
+          signal: controller.signal
         });
 
         const analyzeData = await analyzeRes.json();
@@ -185,15 +192,20 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
         setStep('configure');
       }
     } catch (error: any) {
-      console.error(error);
-      toast.error(error.message);
+      if (error.name === 'AbortError') {
+        toast.info("Procesamiento cancelado por el usuario");
+      } else {
+        console.error(error);
+        toast.error(error.message);
+      }
     } finally {
       setIsUploading(false);
       setIsAiProcessing(false);
+      setAbortController(null);
     }
   };
 
-  const performAiNormalization = async (text: string, bank: string, accountType: string) => {
+  const performAiNormalization = async (text: string, bank: string, accountType: string, signal?: AbortSignal) => {
     setIsAiProcessing(true);
     try {
       const aiRes = await fetch('/api/ai/normalize', {
@@ -204,6 +216,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
           bank,
           accountType,
         }),
+        signal
       });
       const aiNormalizedData = await aiRes.json();
       if (!aiRes.ok) throw new Error(aiNormalizedData.error || 'Error en IA');
@@ -214,8 +227,21 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
 
       setStep('ai_preview');
     } catch (error: any) {
-      toast.error(error.message);
+      if (error.name === 'AbortError') {
+        // handled in parent
+      } else {
+        toast.error(error.message);
+      }
     } finally {
+      setIsAiProcessing(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (abortController) {
+      abortController.abort();
+      setAbortController(null);
+      setIsUploading(false);
       setIsAiProcessing(false);
     }
   };
@@ -478,24 +504,34 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
               </label>
             </div>
 
-            <DialogFooter className="mt-4">
+            <DialogFooter className="mt-4 gap-2">
+              {isUploading && (
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  className="flex-1 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-rose-200"
+                >
+                  <XIcon className="h-4 w-4" />
+                  Cancelar
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => handleSubmit(onSubmit)()}
                 disabled={isUploading || !isValid}
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:shadow-none text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                className={`${isUploading ? 'flex-[2]' : 'w-full'} py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:shadow-none text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20`}
               >
                 {isUploading ? (
                   <>
                     <Loader2Icon className="h-5 w-5 animate-spin" />
-                    {useAi ? 'Analizando con IA...' : 'Subiendo...'}
+                    {useAi ? 'Analizando...' : 'Subiendo...'}
                   </>
                 ) : (
                   <>
                     {useAi ? <SearchIcon className="h-5 w-5" /> : <UploadIcon className="h-5 w-5" />}
                     {useAi ? 'Analizar con IA' : 'Subir y Procesar'}
                   </>
-                )}
+                ) as any}
               </button>
             </DialogFooter>
           </div>

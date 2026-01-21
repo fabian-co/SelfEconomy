@@ -38,7 +38,7 @@ const transactionSchema = z.object({
       default_negative: z.boolean().describe("true si la mayoría son gastos (ej: TC)"),
       positive_patterns: z.array(z.string()).describe("Regex para descripciones que son ingresos/abonos"),
       ignore_patterns: z.array(z.string()).describe("Regex para descripciones que deben ignorarse")
-    }).optional()
+    })
   }).optional()
 });
 
@@ -53,29 +53,45 @@ export async function POST(req: Request) {
     const { object } = await generateObject({
       model: google('gemini-3-flash-preview'),
       schema: transactionSchema,
-      prompt: `Actúa como un experto en análisis financiero. Tu tarea es extraer transacciones de un extracto bancario en texto crudo y convertirlas a un JSON estandarizado.
+      prompt: `Actúa como un experto en análisis financiero y procesamiento de datos. Tu tarea es extraer transacciones de un extracto bancario en texto crudo y convertirlas a un JSON estandarizado, incluyendo un template para procesar futuros archivos similares sin IA.
 
 INSTRUCCIONES DE FECHA:
-1. Detecta el AÑO del extracto.
-2. Formato ISO: YYYY-MM-DD.
+1. Detecta el AÑO del extracto para completar las fechas.
+2. Todas las fechas en el array 'transacciones' deben estar en formato ISO: YYYY-MM-DD.
 
 REGLAS DE TRANSACCIÓN:
 1. Identifica fecha, descripción y valor.
 2. CARGOS son NEGATIVOS, ABONOS son POSITIVOS.
 3. Ignora pagos a tarjeta o transferencias internas.
 
-GENERACIÓN DE TEMPLATE (OBLIGATORIO PARA ESCALABILIDAD):
-- Tu objetivo es detectar el PATRÓN de este extracto para procesarlo sin IA en el futuro.
-- Crea un "regex" que capture la línea de transacción completa con 3 grupos: fecha, descripción y valor.
-- Define "rules":
-  - "default_negative": true si la mayoría de transacciones son gastos que no tienen signo menos en el texto (ej: compras en Tarjeta de Crédito).
-  - "positive_patterns": Lista de regex para descripciones que SI son ingresos/abonos (ej: ["PAGO", "ABONO", "GRACIAS POR TU PAGO"]).
-  - "ignore_patterns": Lista de regex para descripciones que deben ignorarse (ej: ["PAGO A TU TARJETA", "INTERESES"]).
-- decimal_separator: "." o "," según el extracto.
-- thousand_separator: "." o "," o "" según el extracto.
-- Identifica 3 o 4 palabras clave constantes (keywords) únicas del banco.
+DISEÑO DEL TEMPLATE (OBLIGATORIO Y CRÍTICO):
+Crea una configuración que permita a un script de Python (usando re.finditer) extraer las mismas transacciones.
+- signature_keywords: 3-5 frases o palabras únicas que aparecen SIEMPRE en este banco/extracto (ej: "NIT 890.903.938-8", "Estado de Cuenta Tarjeta").
+- transaction_regex: Un regex que capture cada línea de transacción completa. DEBE tener exactamente 3 grupos de captura: (fecha), (descripción), (monto).
+- group_mapping: { date: 1, description: 2, value: 3 } (índices de los grupos en tu regex).
+- rules (OBLIGATORIO):
+  - "default_negative": true si los gastos en el texto NO tienen signo menos (típico en extractos de TC). ¡MUY IMPORTANTE PARA TARJETAS DE CRÉDITO!
+  - "positive_patterns": Regex para descripciones que son abonos/ingresos (ej: ["PAGO", "ABONO", "GRACIAS POR TU PAGO"]).
+  - "ignore_patterns": Regex para líneas que deben saltarse (ej: "SU PAGO", "TRANSFERENCIA ENTRE MIS CUENTAS").
 
-TEXTO DEL EXTRACTO:
+EJEMPLO DE TEMPLATE FUNCIONAL:
+{
+  "entity": "Bancolombia",
+  "account_type": "debit",
+  "signature_keywords": ["BANCOLOMBIA S.A.", "ESTADO DE CUENTA AHORROS"],
+  "transaction_regex": "(\\d{2}/\\d{2})\\s+(.*?)\\s+(-?[\\d\\.,]+)",
+  "group_mapping": { "date": 1, "description": 2, "value": 3 },
+  "date_format": "MM/DD",
+  "decimal_separator": ",",
+  "thousand_separator": ".",
+  "rules": {
+    "default_negative": false,
+    "positive_patterns": ["CONSIGNACION", "TRANSFERENCIA RECIBIDA"],
+    "ignore_patterns": ["SALDO ANTERIOR"]
+  }
+}
+
+TEXTO DEL EXTRACTO A ANALIZAR:
 ${text}`,
     });
 
