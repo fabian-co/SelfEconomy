@@ -22,16 +22,6 @@ const uploadSchema = z.object({
   accountType: z.string().optional(),
   password: z.string().optional(),
   file: z.instanceof(File, { message: "El archivo es obligatorio" }),
-}).refine((data) => {
-  // Validate password for PDF files
-  const ext = data.file.name.toLowerCase().split('.').pop();
-  if (ext === "pdf" && !data.password) {
-    return false;
-  }
-  return true;
-}, {
-  message: "La contraseña es obligatoria para archivos PDF",
-  path: ["password"],
 });
 
 type UploadFormValues = z.infer<typeof uploadSchema>;
@@ -398,7 +388,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             {isPDF && (
               <div className="grid gap-2">
                 <Label htmlFor="password">
-                  Contraseña del PDF <span className="text-rose-500">*</span>
+                  Contraseña del PDF <span className="text-zinc-400 font-normal">(Opcional)</span>
                 </Label>
                 <Input
                   id="password"
