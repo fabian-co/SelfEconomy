@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     }
 
     const { object } = await generateObject({
-      model: google('gemini-2.5-flash'),
+      model: google('gemini-3-flash-preview'),
       schema: transactionSchema,
       prompt: `Actúa como un experto en análisis financiero y procesamiento de datos. Tu tarea es extraer transacciones de un extracto bancario en texto crudo y convertirlas a un JSON estandarizado, incluyendo un template para procesar futuros archivos similares sin IA.
 

@@ -20,8 +20,8 @@ def extract_text_from_pdf(file_path, password=None):
 def extract_text_from_excel(file_path):
     try:
         df = pd.read_excel(file_path)
-        # Convert to markdown-like table for better LLM understanding
-        return df.to_markdown(index=False)
+        # Convert to CSV for robust processing
+        return df.to_csv(index=False)
     except Exception as e:
         raise Exception(f"Error extrayendo texto de Excel: {str(e)}")
 
@@ -31,7 +31,7 @@ def extract_text_from_csv(file_path):
         for enc in ['utf-8', 'latin-1', 'cp1252']:
             try:
                 df = pd.read_csv(file_path, encoding=enc)
-                return df.to_markdown(index=False)
+                return df.to_csv(index=False)
             except UnicodeDecodeError:
                 continue
         raise Exception("No se pudo decodificar el archivo CSV con los encodings probados.")
