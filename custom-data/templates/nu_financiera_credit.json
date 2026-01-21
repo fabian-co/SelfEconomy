@@ -1,0 +1,33 @@
+{
+  "entity": "Nu Financiera",
+  "account_type": "credit",
+  "signature_keywords": [
+    "NIT 901.658.107-2",
+    "Nu Financiera",
+    "Periodo facturado",
+    "Gracias por tu pago"
+  ],
+  "transaction_regex": "(\\d{2}\\s[A-Z]{3}(?:\\s\\d{4})?)\\s+((?:(?!\\$|\\d{2}\\s[A-Z]{3}).)+?)\\s+\\$([\\d\\.,]+)",
+  "group_mapping": {
+    "date": 1,
+    "description": 2,
+    "value": 3
+  },
+  "date_format": "DD MMM YYYY",
+  "decimal_separator": ",",
+  "thousand_separator": ".",
+  "rules": {
+    "default_negative": true,
+    "positive_patterns": [
+      "Devolución",
+      "Ajuste a favor",
+      "Gracias por tu pago"
+    ],
+    "ignore_patterns": [
+      "Gracias por tu pago",
+      "A capital",
+      "A intereses",
+      "A cargos"
+    ]
+  }
+}
