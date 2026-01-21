@@ -159,6 +159,24 @@ export async function POST(request: Request) {
           matchedTemplate
         });
       } catch (err: any) {
+        // Log for debugging
+        console.log('[DEBUG] Extract error:', { code: err.code, stderr: err.stderr, stdout: err.stdout, message: err.message });
+
+        // Exit code 10 means password required (defined in extract_text.py)
+        if (err.code === 10) {
+          return NextResponse.json({ error: 'PASSWORD_REQUIRED' }, { status: 401 });
+        }
+
+        // Check stderr for PASSWORD_REQUIRED (printed by Python script)
+        if (err.stderr && err.stderr.includes("PASSWORD_REQUIRED")) {
+          return NextResponse.json({ error: 'PASSWORD_REQUIRED' }, { status: 401 });
+        }
+
+        // Check stdout as fallback
+        if (err.stdout && err.stdout.includes("PASSWORD_REQUIRED")) {
+          return NextResponse.json({ error: 'PASSWORD_REQUIRED' }, { status: 401 });
+        }
+
         return NextResponse.json({ error: `Error extrayendo texto: ${err.message}` }, { status: 500 });
       }
     }

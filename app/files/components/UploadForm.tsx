@@ -46,6 +46,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   const [isTemplatesLoading, setIsTemplatesLoading] = useState(false);
   const [extractedText, setExtractedText] = useState<string>("");
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const {
     register,
@@ -145,7 +146,16 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             signal: controller.signal
           });
           const extractData = await extractRes.json();
-          if (!extractRes.ok) throw new Error(extractData.error || 'Error en extracción');
+
+          if (!extractRes.ok) {
+            if (extractRes.status === 401 || extractData.error === 'PASSWORD_REQUIRED') {
+              setPasswordError("Este archivo está protegido con contraseña. Por favor ingresa la contraseña para continuar.");
+              setIsAiProcessing(false);
+              setIsUploading(false);
+              return;
+            }
+            throw new Error(extractData.error || 'Error en extracción');
+          }
 
           setExtractedText(extractData.text);
 
@@ -395,8 +405,20 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
                   type="password"
                   placeholder="Contraseña"
                   {...register("password")}
-                  className={`rounded-xl ${errors.password ? 'border-rose-500 focus-visible:ring-rose-500/20' : ''}`}
+                  onChange={(e) => {
+                    register("password").onChange(e);
+                    if (passwordError) setPasswordError(null);
+                  }}
+                  className={`rounded-xl ${passwordError ? 'border-rose-500 focus-visible:ring-rose-500/20' : ''}`}
                 />
+                {passwordError && (
+                  <div className="flex items-center gap-2 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-xl">
+                    <div className="h-6 w-6 rounded-full bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center shrink-0">
+                      <XIcon className="h-3 w-3 text-rose-600 dark:text-rose-400" />
+                    </div>
+                    <p className="text-xs text-rose-700 dark:text-rose-300">{passwordError}</p>
+                  </div>
+                )}
               </div>
             )}
 

@@ -14,6 +14,25 @@ def extract_text_from_pdf(file_path, password=None):
                 if page_text:
                     text_content.append(f"--- PÁGINA {i+1} ---\n{page_text}")
     except Exception as e:
+        error_msg = str(e).lower()
+        error_type = type(e).__name__.lower()
+        
+        # Check for password-related errors:
+        # 1. Keywords in error message
+        # 2. Empty error message (common with encrypted PDFs)
+        # 3. Exception type contains relevant keywords
+        password_keywords = ["password", "encrypted", "decrypt", "pdfsyntax", "pdfpassword"]
+        
+        is_password_error = (
+            any(keyword in error_msg for keyword in password_keywords) or
+            any(keyword in error_type for keyword in password_keywords) or
+            (error_msg.strip() == "" or error_msg.strip() == "none")  # Empty message often means encryption
+        )
+        
+        if is_password_error:
+            print("PASSWORD_REQUIRED", file=sys.stderr)
+            sys.exit(10)
+        
         raise Exception(f"Error extrayendo texto de PDF: {str(e)}")
     return "\n\n".join(text_content)
 
