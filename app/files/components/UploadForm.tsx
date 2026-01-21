@@ -279,7 +279,13 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   const handleSkipTemplate = async () => {
     const text = extractedText;
     setDetectedTemplate(null);
-    await performAiNormalization(text, watch("bank") || "", watch("accountType") || "");
+    setIsUploading(true);
+    try {
+      await performAiNormalization(text, watch("bank") || "", watch("accountType") || "");
+    } finally {
+      // isUploading is handled by performAiNormalization finally block usually, 
+      // but just in case of immediate errors
+    }
   };
 
   const handleAiConfirm = async () => {
@@ -417,35 +423,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
               </div>
             </div>
 
-            {detectedTemplate && (
-              <div className="bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 p-4 rounded-2xl flex flex-col gap-3 animate-in fade-in slide-in-from-top-2">
-                <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                  <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
-                    <CheckIcon className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold">¡Template detectado!</h4>
-                    <p className="text-[10px] opacity-80">Encontramos un patrón para <strong>{detectedTemplate.entity}</strong>.</p>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleUseTemplate}
-                    disabled={isAiProcessing}
-                    className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2"
-                  >
-                    {isAiProcessing ? <Loader2Icon className="h-3 w-3 animate-spin" /> : "Usar Template"}
-                  </button>
-                  <button
-                    onClick={handleSkipTemplate}
-                    disabled={isAiProcessing}
-                    className="flex-1 py-2 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 text-xs font-bold rounded-lg border border-zinc-200 dark:border-zinc-800 transition-all"
-                  >
-                    Ignorar y usar IA
-                  </button>
-                </div>
-              </div>
-            )}
+
 
             {/* Template Library Toggle */}
             <div className="mt-2">
@@ -504,35 +482,70 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
               </label>
             </div>
 
-            <DialogFooter className="mt-4 gap-2">
-              {isUploading && (
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  className="flex-1 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-rose-200"
-                >
-                  <XIcon className="h-4 w-4" />
-                  Cancelar
-                </button>
+            <DialogFooter className="mt-4 flex-col gap-2">
+              {detectedTemplate && !isUploading ? (
+                <div className="w-full flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2">
+                  <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl mb-1">
+                    <div className="h-8 w-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center shrink-0">
+                      <CheckIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-emerald-800 dark:text-emerald-300">¡Template detectado!</h4>
+                      <p className="text-[10px] text-emerald-700 dark:text-emerald-400 opacity-80">Patrón para <strong>{detectedTemplate.entity}</strong>.</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleUseTemplate}
+                      disabled={isAiProcessing}
+                      className="flex-[2] py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                    >
+                      {isAiProcessing ? <Loader2Icon className="h-4 w-4 animate-spin" /> : <CheckIcon className="h-4 w-4" />}
+                      Usar Template
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSkipTemplate}
+                      disabled={isAiProcessing}
+                      className="flex-1 py-3 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 text-xs font-bold rounded-xl border border-zinc-200 dark:border-zinc-800 transition-all"
+                    >
+                      Ignorar y usar IA
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-full flex gap-2">
+                  {isUploading && (
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      className="flex-1 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-rose-200"
+                    >
+                      <XIcon className="h-4 w-4" />
+                      Cancelar
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleSubmit(onSubmit)()}
+                    disabled={isUploading || !isValid}
+                    className={`${isUploading ? 'flex-[2]' : 'w-full'} py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:shadow-none text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20`}
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2Icon className="h-5 w-5 animate-spin" />
+                        {useAi ? 'Analizando...' : 'Subiendo...'}
+                      </>
+                    ) : (
+                      <>
+                        {useAi ? <SearchIcon className="h-5 w-5" /> : <UploadIcon className="h-5 w-5" />}
+                        {useAi ? 'Analizar con IA' : 'Subir y Procesar'}
+                      </>
+                    )}
+                  </button>
+                </div>
               )}
-              <button
-                type="button"
-                onClick={() => handleSubmit(onSubmit)()}
-                disabled={isUploading || !isValid}
-                className={`${isUploading ? 'flex-[2]' : 'w-full'} py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:shadow-none text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20`}
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2Icon className="h-5 w-5 animate-spin" />
-                    {useAi ? 'Analizando...' : 'Subiendo...'}
-                  </>
-                ) : (
-                  <>
-                    {useAi ? <SearchIcon className="h-5 w-5" /> : <UploadIcon className="h-5 w-5" />}
-                    {useAi ? 'Analizar con IA' : 'Subir y Procesar'}
-                  </>
-                ) as any}
-              </button>
             </DialogFooter>
           </div>
         ) : step === 'ai_preview' ? (

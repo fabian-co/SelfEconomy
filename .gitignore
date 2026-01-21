@@ -50,4 +50,6 @@ constants/category-rules.json
 venv
 
 # custom data
-custom-data/
+custom-data/categories
+custom-data/rules
+custom-data/data_Antigravity

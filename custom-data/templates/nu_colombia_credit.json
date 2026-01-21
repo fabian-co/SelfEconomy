@@ -1,0 +1,18 @@
+{
+  "entity": "Nu Colombia",
+  "account_type": "credit",
+  "signature_keywords": [
+    "Nu Financiera",
+    "NIT 901.658.107-2",
+    "Deuda a pagar este mes"
+  ],
+  "transaction_regex": "(\\d{2}\\s[A-Z]{3}(?:\\s\\d{4})?)\\s+([A-Za-z\\*\\.\\s,]{3,30})\\s+\\$([\\d\\.,]+)",
+  "group_mapping": {
+    "date": 1,
+    "description": 2,
+    "value": 3
+  },
+  "date_format": "DD MMM YYYY",
+  "decimal_separator": ",",
+  "thousand_separator": "."
+}
