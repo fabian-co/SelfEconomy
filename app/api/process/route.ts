@@ -194,27 +194,78 @@ export async function POST(request: Request) {
         await execAsync(extractCmd);
         const textContent = await fs.promises.readFile(tempTxtPath, 'utf-8');
 
-        // Step 2: Call AI to generate template
-        console.log('[AI Template] Calling AI to generate template...');
-        const aiRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/ai/generate-template`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: textContent }),
-        });
+        // Normalize function for matching
+        const normalize = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
+        const normalizedContent = normalize(textContent);
 
-        if (!aiRes.ok) {
-          const errData = await aiRes.json();
-          throw new Error(errData.error || 'Error generando template con IA');
+        // Step 2: Check if an existing template matches based on signature_keywords
+        let matchedTemplate = null;
+        if (fs.existsSync(templatesDir)) {
+          const files = await fs.promises.readdir(templatesDir);
+          console.log(`[AI Template] Buscando templates existentes en ${templatesDir}... (${files.length} archivos)`);
+
+          for (const f of files.filter(f => f.endsWith('.json'))) {
+            try {
+              const content = await fs.promises.readFile(path.join(templatesDir, f), 'utf-8');
+              const tmp = JSON.parse(content);
+
+              if (!tmp.signature_keywords || tmp.signature_keywords.length === 0) continue;
+
+              const matchedKeywords = tmp.signature_keywords.filter((k: string) =>
+                normalizedContent.includes(normalize(k))
+              );
+
+              const matchesCount = matchedKeywords.length;
+              const matchPercentage = (matchesCount / tmp.signature_keywords.length) * 100;
+
+              console.log(`[AI Template] ${f}: ${matchesCount}/${tmp.signature_keywords.length} keywords encontradas (${matchPercentage.toFixed(1)}%)`);
+              if (matchesCount < tmp.signature_keywords.length) {
+                const missing = tmp.signature_keywords.filter((k: string) => !normalizedContent.includes(normalize(k)));
+                console.log(`[AI Template] Faltan: ${missing.join(", ")}`);
+              }
+
+              // Threshold: 75% match OR at least 2/3 for small keyword sets
+              if (matchPercentage >= 75 || (tmp.signature_keywords.length <= 3 && matchesCount >= 2)) {
+                matchedTemplate = { ...tmp, fileName: f };
+                console.log(`[AI Template] ¡MATCH! Usando template existente: ${f}`);
+                break;
+              }
+            } catch (err) {
+              console.error(`[AI Template] Error procesando ${f}:`, err);
+            }
+          }
         }
 
-        const { template } = await aiRes.json();
-        console.log('[AI Template] Template generated:', template.entity, template.account_type);
+        let template;
 
-        // Step 3: Save template to file for template_processor
+        if (matchedTemplate) {
+          // Use existing template instead of AI
+          console.log('[AI Template] Usando template existente en lugar de IA:', matchedTemplate.entity, matchedTemplate.account_type);
+          template = matchedTemplate;
+        } else {
+          // Step 3: Call AI to generate template (only if no match found)
+          console.log('[AI Template] No se encontró template. Llamando a IA para generar template...');
+          const aiRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/ai/generate-template`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: textContent }),
+          });
+
+          if (!aiRes.ok) {
+            const errData = await aiRes.json();
+            throw new Error(errData.error || 'Error generando template con IA');
+          }
+
+          const aiResult = await aiRes.json();
+          template = aiResult.template;
+          console.log('[AI Template] Template generado por IA:', template.entity, template.account_type);
+        }
+
+        // Step 4: Save template to file for template_processor
         const tempTemplatePath = path.join(process.cwd(), 'app', 'api', 'extracto', 'temp', `template_${Date.now()}.json`);
         await fs.promises.writeFile(tempTemplatePath, JSON.stringify(template, null, 2));
 
-        // Step 4: Process with template_processor.py
+        // Step 5: Process with template_processor.py
         const processorScriptPath = path.join(process.cwd(), 'app', 'api', 'py', 'template_processor.py');
         const processCmd = `"${pythonPath}" "${processorScriptPath}" --text "${tempTxtPath}" --template "${tempTemplatePath}"`;
 

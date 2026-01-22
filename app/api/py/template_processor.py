@@ -3,7 +3,12 @@ import re
 import sys
 import argparse
 import os
+import io
 from datetime import datetime
+
+# Force UTF-8 encoding for stdout on Windows
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
 MONTH_MAP = {
     'ENE': 1, 'FEB': 2, 'MAR': 3, 'ABR': 4, 'MAY': 5, 'JUN': 6,
