@@ -1,0 +1,35 @@
+{
+  "entity": "Bancolombia",
+  "account_type": "debit",
+  "signature_keywords": [
+    "SUCURSAL TULUA",
+    "N�MERO 91211257666",
+    "SUCURSAL VIRTUAL PERSONAS"
+  ],
+  "transaction_regex": "^(\\d{1,2}/\\d{1,2})\\s+(.*?)\\s+(-?[\\d.,]+)\\s+[\\d.,]+$",
+  "group_mapping": {
+    "date": 1,
+    "description": 2,
+    "value": 3
+  },
+  "date_format": "D/M",
+  "year_hint": 2025,
+  "decimal_separator": ".",
+  "thousand_separator": ",",
+  "rules": {
+    "default_negative": false,
+    "positive_patterns": [
+      "ABONO",
+      "CONSIG",
+      "TRANSFERENCIA DESDE",
+      "PAGO DE NOMI",
+      "PAGO DE PROV",
+      "DEV CUOTA"
+    ],
+    "ignore_patterns": [
+      "TRANSFERENCIA CTA SUC VIRTUAL",
+      "TRASLADO A FONDO",
+      "PAGO PSE"
+    ]
+  }
+}

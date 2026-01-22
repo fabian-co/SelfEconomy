@@ -129,46 +129,41 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
       setUploadedFilePath(uploadResult.path);
 
       if (useAi) {
-        // AI FLOW
+        // NEW AI FLOW: AI generates template, template_processor extracts transactions
         setIsAiProcessing(true);
         try {
-          // Step A: Extract Text
-          const extractRes = await fetch('/api/process', {
+          const processRes = await fetch('/api/process', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               filePath: uploadResult.path,
               password: values.password,
-              bank: values.bank || "",
-              accountType: values.accountType || "",
-              action: 'ai_extract'
+              action: 'ai_process_with_template'
             }),
             signal: controller.signal
           });
-          const extractData = await extractRes.json();
+          const processData = await processRes.json();
 
-          if (!extractRes.ok) {
-            if (extractRes.status === 401 || extractData.error === 'PASSWORD_REQUIRED') {
+          if (!processRes.ok) {
+            if (processRes.status === 401 || processData.error === 'PASSWORD_REQUIRED') {
               setPasswordError("Este archivo está protegido con contraseña. Por favor ingresa la contraseña para continuar.");
               setIsAiProcessing(false);
               setIsUploading(false);
               return;
             }
-            throw new Error(extractData.error || 'Error en extracción');
+            throw new Error(processData.error || 'Error en procesamiento AI+Template');
           }
 
-          setExtractedText(extractData.text);
+          // Set the AI data for preview
+          setAiData(processData);
+          if (processData.meta_info?.banco) setValue("bank", processData.meta_info.banco);
+          if (processData.meta_info?.tipo_cuenta) setValue("accountType", processData.meta_info.tipo_cuenta);
 
-          if (extractData.matchedTemplate) {
-            setDetectedTemplate(extractData.matchedTemplate);
-            setIsAiProcessing(false);
-            setIsUploading(false);
-            return;
-          }
-
-          await performAiNormalization(extractData.text, values.bank || "", values.accountType || "", controller.signal);
+          setStep('ai_preview');
         } catch (error: any) {
           throw error;
+        } finally {
+          setIsAiProcessing(false);
         }
       } else {
         // LEGACY FLOW

@@ -181,6 +181,69 @@ export async function POST(request: Request) {
       }
     }
 
+    // Action: AI Generate Template & Process (New workflow)
+    if (action === 'ai_process_with_template') {
+      const tempTxtPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'temp', `${path.basename(filePath)}.txt`);
+      await fs.promises.mkdir(path.dirname(tempTxtPath), { recursive: true });
+
+      let extractCmd = `"${pythonPath}" "${extractScriptPath}" --input "${sourcePath}" --output "${tempTxtPath}"`;
+      if (password) extractCmd += ` --password "${password}"`;
+
+      try {
+        // Step 1: Extract text
+        await execAsync(extractCmd);
+        const textContent = await fs.promises.readFile(tempTxtPath, 'utf-8');
+
+        // Step 2: Call AI to generate template
+        console.log('[AI Template] Calling AI to generate template...');
+        const aiRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/ai/generate-template`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: textContent }),
+        });
+
+        if (!aiRes.ok) {
+          const errData = await aiRes.json();
+          throw new Error(errData.error || 'Error generando template con IA');
+        }
+
+        const { template } = await aiRes.json();
+        console.log('[AI Template] Template generated:', template.entity, template.account_type);
+
+        // Step 3: Save template to file for template_processor
+        const tempTemplatePath = path.join(process.cwd(), 'app', 'api', 'extracto', 'temp', `template_${Date.now()}.json`);
+        await fs.promises.writeFile(tempTemplatePath, JSON.stringify(template, null, 2));
+
+        // Step 4: Process with template_processor.py
+        const processorScriptPath = path.join(process.cwd(), 'app', 'api', 'py', 'template_processor.py');
+        const processCmd = `"${pythonPath}" "${processorScriptPath}" --text "${tempTxtPath}" --template "${tempTemplatePath}"`;
+
+        console.log('[AI Template] Processing with template_processor...');
+        const { stdout } = await execAsync(processCmd);
+
+        // Cleanup temp files
+        await fs.promises.unlink(tempTxtPath);
+        await fs.promises.unlink(tempTemplatePath);
+
+        const result = JSON.parse(stdout);
+        if (result.error) throw new Error(result.error);
+
+        console.log('[AI Template] Success! Transactions:', result.transacciones?.length);
+
+        return NextResponse.json(result);
+
+      } catch (err: any) {
+        console.error('[AI Template] Error:', err);
+
+        // Password error handling
+        if (err.code === 10 || (err.stderr && err.stderr.includes("PASSWORD_REQUIRED"))) {
+          return NextResponse.json({ error: 'PASSWORD_REQUIRED' }, { status: 401 });
+        }
+
+        return NextResponse.json({ error: `Error en procesamiento AI+Template: ${err.message}` }, { status: 500 });
+      }
+    }
+
     // Action: Save JSON (New AI flow) + Save Template
     if (action === 'save_json') {
       const jsonFileName = outputName || path.basename(filePath, path.extname(filePath));
