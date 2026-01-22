@@ -26,6 +26,7 @@ interface TransactionEditorProps {
   categoryName?: string;
   transactionId?: string;
   isMarkedPositive?: boolean;
+  isPositiveGlobal?: boolean;
   onSave: (data: {
     originalDescription: string,
     description: string,
@@ -39,14 +40,14 @@ interface TransactionEditorProps {
   trigger?: React.ReactNode;
 }
 
-export function TransactionEditor({ description, originalDescription, categoryId, categoryName, transactionId, isMarkedPositive, onSave, trigger }: TransactionEditorProps) {
+export function TransactionEditor({ description, originalDescription, categoryId, categoryName, transactionId, isMarkedPositive, isPositiveGlobal, onSave, trigger }: TransactionEditorProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editDescription, setEditDescription] = useState(description);
   const [selectedCategoryId, setSelectedCategoryId] = useState(categoryId || "");
   const [applyGlobally, setApplyGlobally] = useState(true);
   const [markAsPositive, setMarkAsPositive] = useState(isMarkedPositive || false);
-  const [applyPositiveGlobally, setApplyPositiveGlobally] = useState(true);
+  const [applyPositiveGlobally, setApplyPositiveGlobally] = useState(isPositiveGlobal !== undefined ? isPositiveGlobal : true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newName, setNewName] = useState("");
@@ -62,8 +63,9 @@ export function TransactionEditor({ description, originalDescription, categoryId
       setEditDescription(description);
       setSelectedCategoryId(categoryId || "");
       setMarkAsPositive(isMarkedPositive || false);
+      setApplyPositiveGlobally(isPositiveGlobal !== undefined ? isPositiveGlobal : true);
     }
-  }, [open, description, categoryId, isMarkedPositive]);
+  }, [open, description, categoryId, isMarkedPositive, isPositiveGlobal]);
 
   useEffect(() => {
     if (open) {

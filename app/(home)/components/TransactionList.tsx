@@ -212,6 +212,7 @@ export function TransactionList({
                     categoryIcon={group.icon}
                     transactionId={tx.id || `${tx.fecha}-${tx.descripcion}-${tx.valor}-${index}`}
                     isMarkedPositive={tx.isMarkedPositive}
+                    isPositiveGlobal={tx.isPositiveGlobal}
                     onUpdate={handleUpdateTransaction}
                   />
                 ))}

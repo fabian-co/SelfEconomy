@@ -80,6 +80,7 @@ export default function Home() {
 
           // Check positive rules (by description or by ID)
           let isMarkedPositive = false;
+          let isPositiveGlobal = false;
           let valor = tx.valor;
 
           // Check if there's a positive rule by description (partial match)
@@ -89,8 +90,10 @@ export default function Home() {
 
           if (descriptionRule && positiveRules.byDescription[descriptionRule]?.isPositive) {
             isMarkedPositive = true;
+            isPositiveGlobal = true;
           } else if (positiveRules.byId[txId]?.isPositive) {
             isMarkedPositive = true;
+            isPositiveGlobal = false;
           }
 
           // If marked as positive and value is negative, make it positive
@@ -108,7 +111,8 @@ export default function Home() {
             categoryId,
             categoryName,
             valor,
-            isMarkedPositive
+            isMarkedPositive,
+            isPositiveGlobal
           };
         });
 
