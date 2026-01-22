@@ -21,12 +21,6 @@
     "positive_patterns": [
       "Devoluci�n",
       "Gracias por tu pago"
-    ],
-    "ignore_patterns": [
-      "Gracias por tu pago",
-      "A capital",
-      "A intereses",
-      "A cargos y comisiones"
     ]
   },
   "fileName": "nu_financiera_credit.json"

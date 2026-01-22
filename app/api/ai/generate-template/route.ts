@@ -20,8 +20,7 @@ const templateSchema = z.object({
   thousand_separator: z.enum(['.', ',']).default('.'),
   rules: z.object({
     default_negative: z.boolean().describe("true si los montos son gastos por defecto (típico en TC)"),
-    positive_patterns: z.array(z.string()).describe("Regex para descripciones que son ingresos/abonos"),
-    ignore_patterns: z.array(z.string()).describe("Regex para descripciones que deben ignorarse (pagos a TC, transferencias internas)")
+    positive_patterns: z.array(z.string()).describe("Regex para descripciones que son ingresos/abonos")
   })
 });
 
@@ -71,8 +70,7 @@ EJEMPLO DE TEMPLATE PARA BANCOLOMBIA (CUENTAS DE AHORRO):
   "thousand_separator": ",",
   "rules": {
     "default_negative": false,
-    "positive_patterns": ["ABONO", "CONSIG", "TRANSFERENCIA DESDE", "PAGO DE NOMI", "PAGO DE PROV", "DEV CUOTA"],
-    "ignore_patterns": ["TRANSFERENCIA CTA SUC VIRTUAL", "TRASLADO A FONDO", "PAGO PSE"]
+    "positive_patterns": ["ABONO", "CONSIG", "TRANSFERENCIA DESDE", "PAGO DE NOMI", "PAGO DE PROV", "DEV CUOTA"]
   }
 }
 
@@ -89,8 +87,7 @@ EJEMPLO PARA TARJETA DE CRÉDITO (Nu Financiera):
   "thousand_separator": ".",
   "rules": {
     "default_negative": true,
-    "positive_patterns": ["Devolución", "Gracias por tu pago"],
-    "ignore_patterns": ["Gracias por tu pago", "A capital", "A intereses"]
+    "positive_patterns": ["Devolución", "Gracias por tu pago"]
   }
 }
 

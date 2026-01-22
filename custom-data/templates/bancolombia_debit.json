@@ -25,11 +25,7 @@
       "PAGO DE NOMI",
       "PAGO DE PROV",
       "DEV CUOTA"
-    ],
-    "ignore_patterns": [
-      "TRANSFERENCIA CTA SUC VIRTUAL",
-      "TRASLADO A FONDO",
-      "PAGO PSE"
     ]
-  }
+  },
+  "fileName": "bancolombia_debit.json"
 }
