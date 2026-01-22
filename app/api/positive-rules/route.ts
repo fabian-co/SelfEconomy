@@ -45,16 +45,22 @@ export async function POST(request: Request) {
     const timestamp = new Date().toISOString();
 
     if (applyGlobally && description) {
-      // Apply to all transactions with this description
       if (isPositive) {
         rules.byDescription[description] = { isPositive: true, lastUpdated: timestamp };
+        // Cleanup specific ID rule if it exists for this transaction
+        if (transactionId) {
+          delete rules.byId[transactionId];
+        }
       } else {
         delete rules.byDescription[description];
       }
     } else if (transactionId) {
-      // Apply only to this specific transaction
       if (isPositive) {
         rules.byId[transactionId] = { isPositive: true, lastUpdated: timestamp };
+        // Cleanup global rule for this description
+        if (description) {
+          delete rules.byDescription[description];
+        }
       } else {
         delete rules.byId[transactionId];
       }
