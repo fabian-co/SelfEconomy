@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Category } from "./category-manager/CategoryItem";
@@ -16,29 +17,36 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { SearchInput } from "@/components/ui/SearchInput";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { IconMap } from "./category-manager/constants";
-import { Plus, ChevronDown, Tag, X } from "lucide-react";
+import { Plus, ChevronDown, Tag, X, TrendingUp } from "lucide-react";
 
 interface TransactionEditorProps {
   description: string;
   originalDescription?: string;
   categoryId?: string;
   categoryName?: string;
+  transactionId?: string;
+  isMarkedPositive?: boolean;
   onSave: (data: {
     originalDescription: string,
     description: string,
     categoryId: string,
     categoryName: string,
-    applyGlobally: boolean
+    applyGlobally: boolean,
+    markAsPositive?: boolean,
+    applyPositiveGlobally?: boolean,
+    transactionId?: string
   }) => Promise<void>;
   trigger?: React.ReactNode;
 }
 
-export function TransactionEditor({ description, originalDescription, categoryId, categoryName, onSave, trigger }: TransactionEditorProps) {
+export function TransactionEditor({ description, originalDescription, categoryId, categoryName, transactionId, isMarkedPositive, onSave, trigger }: TransactionEditorProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editDescription, setEditDescription] = useState(description);
   const [selectedCategoryId, setSelectedCategoryId] = useState(categoryId || "");
   const [applyGlobally, setApplyGlobally] = useState(true);
+  const [markAsPositive, setMarkAsPositive] = useState(isMarkedPositive || false);
+  const [applyPositiveGlobally, setApplyPositiveGlobally] = useState(true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newName, setNewName] = useState("");
@@ -53,8 +61,9 @@ export function TransactionEditor({ description, originalDescription, categoryId
     if (open) {
       setEditDescription(description);
       setSelectedCategoryId(categoryId || "");
+      setMarkAsPositive(isMarkedPositive || false);
     }
-  }, [open, description, categoryId]);
+  }, [open, description, categoryId, isMarkedPositive]);
 
   useEffect(() => {
     if (open) {
@@ -114,7 +123,10 @@ export function TransactionEditor({ description, originalDescription, categoryId
         description: editDescription,
         categoryId: finalCategoryId,
         categoryName: finalCategoryName,
-        applyGlobally
+        applyGlobally,
+        markAsPositive,
+        applyPositiveGlobally,
+        transactionId
       });
 
       setOpen(false);
@@ -289,6 +301,39 @@ export function TransactionEditor({ description, originalDescription, categoryId
             >
               Aplicar a todas las transacciones con este nombre
             </label>
+          </div>
+
+          {/* Mark as Positive Section */}
+          <div className="space-y-3 bg-emerald-50 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
+                <Label htmlFor="markAsPositive" className="text-sm font-medium text-emerald-700 dark:text-emerald-400 cursor-pointer">
+                  Marcar como ingreso (positiva)
+                </Label>
+              </div>
+              <Switch
+                id="markAsPositive"
+                checked={markAsPositive}
+                onCheckedChange={setMarkAsPositive}
+              />
+            </div>
+            {markAsPositive && (
+              <div className="flex items-center space-x-2 pt-2 border-t border-emerald-100 dark:border-emerald-900/30">
+                <Checkbox
+                  id="applyPositiveGlobally"
+                  checked={applyPositiveGlobally}
+                  onCheckedChange={(checked) => setApplyPositiveGlobally(checked as boolean)}
+                  className="rounded-md border-emerald-300 dark:border-emerald-700"
+                />
+                <label
+                  htmlFor="applyPositiveGlobally"
+                  className="text-xs font-medium leading-none cursor-pointer text-emerald-600 dark:text-emerald-400"
+                >
+                  Aplicar a todas las transacciones con esta descripción
+                </label>
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 pt-2">

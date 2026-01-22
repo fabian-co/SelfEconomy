@@ -20,14 +20,21 @@ export default function Home() {
   };
 
   const rulesPath = path.join(process.cwd(), "custom-data/rules/category-rules.json");
+  const positiveRulesPath = path.join(process.cwd(), "custom-data/rules/positive-rules.json");
   const categoriesPath = path.join(process.cwd(), "constants/categories.json");
   const customCategoriesPath = path.join(process.cwd(), "custom-data/categories/custom-categories.json");
 
   let categoryRules: Record<string, any> = {};
+  let positiveRules: { byDescription: Record<string, any>; byId: Record<string, any> } = { byDescription: {}, byId: {} };
   let categories: any[] = [];
 
   if (fs.existsSync(rulesPath)) {
     categoryRules = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
+  }
+
+  // Load positive rules
+  if (fs.existsSync(positiveRulesPath)) {
+    positiveRules = JSON.parse(fs.readFileSync(positiveRulesPath, 'utf8'));
   }
 
   // Load default categories
@@ -54,7 +61,7 @@ export default function Home() {
         const bankName = data.meta_info?.banco || "Bancolombia";
         const accountType = data.meta_info?.tipo_cuenta || "debit";
 
-        const transactionsWithSource = data.transacciones.map((tx: any) => {
+        const transactionsWithSource = data.transacciones.map((tx: any, index: number) => {
           const originalDescription = tx.descripcion;
           const rule = categoryRules[originalDescription];
 
@@ -68,14 +75,40 @@ export default function Home() {
             categoryName = rule.categoryName;
           }
 
+          // Generate transaction ID for positive rule lookup
+          const txId = tx.id || `${tx.fecha}-${tx.descripcion}-${tx.valor}-${index}`;
+
+          // Check positive rules (by description or by ID)
+          let isMarkedPositive = false;
+          let valor = tx.valor;
+
+          // Check if there's a positive rule by description (partial match)
+          const descriptionRule = Object.keys(positiveRules.byDescription).find(
+            key => originalDescription.includes(key)
+          );
+
+          if (descriptionRule && positiveRules.byDescription[descriptionRule]?.isPositive) {
+            isMarkedPositive = true;
+          } else if (positiveRules.byId[txId]?.isPositive) {
+            isMarkedPositive = true;
+          }
+
+          // If marked as positive and value is negative, make it positive
+          if (isMarkedPositive && valor < 0) {
+            valor = Math.abs(valor);
+          }
+
           return {
             ...tx,
+            id: txId,
             originalDescription, // Keep the original for future edits
             descripcion: description,
             banco: bankName,
             tipo_cuenta: accountType,
             categoryId,
-            categoryName
+            categoryName,
+            valor,
+            isMarkedPositive
           };
         });
 

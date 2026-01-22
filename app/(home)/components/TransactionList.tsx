@@ -77,12 +77,33 @@ export function TransactionList({
   }, [currentGroup, categories]);
 
   const handleUpdateTransaction = async (data: any) => {
-    const res = await fetch("/api/category-rules", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    if (res.ok) {
+    let categorySuccess = true;
+
+    // Only update category rules if categoryId is provided
+    if (data.categoryId) {
+      const res = await fetch("/api/category-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      categorySuccess = res.ok;
+    }
+
+    // Update positive rules if markAsPositive is defined
+    if (data.markAsPositive !== undefined) {
+      await fetch("/api/positive-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: data.originalDescription || data.description,
+          transactionId: data.transactionId,
+          isPositive: data.markAsPositive,
+          applyGlobally: data.applyPositiveGlobally
+        }),
+      });
+    }
+
+    if (categorySuccess) {
       fetchCategories();
       router.refresh();
     }
@@ -189,6 +210,8 @@ export function TransactionList({
                     categoryId={tx.categoryId}
                     categoryName={tx.categoryName}
                     categoryIcon={group.icon}
+                    transactionId={tx.id || `${tx.fecha}-${tx.descripcion}-${tx.valor}-${index}`}
+                    isMarkedPositive={tx.isMarkedPositive}
                     onUpdate={handleUpdateTransaction}
                   />
                 ))}
