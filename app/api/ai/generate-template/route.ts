@@ -51,6 +51,8 @@ REGLAS CRÍTICAS PARA EL REGEX:
 3. Si hay una columna de saldo después del monto, inclúyela en el regex pero NO la captures
 4. Usa .*? para descripciones (non-greedy)
 5. Para montos, captura: (-?[\\d.,]+) - incluye puntos y comas
+6. NO HARDCODEES el año en el regex - usa grupos opcionales (?:\s\d{4})? para años
+7. Usa negative lookahead (?!...) para descripciones complejas que pueden contener espacios
 
 REGLAS PARA ENTITY:
 - Usa el nombre COMPLETO del banco (ej: "Bancolombia", "Nu Financiera", "Davivienda")
