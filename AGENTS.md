@@ -114,7 +114,7 @@ La interfaz de usuario está construida utilizando **shadcn/ui**, lo que proporc
 - **Skills Next.js 16:** Consulta [SKILLS.md](skills/nextjs/SKILLS.md) para ver las nuevas características y buenas prácticas de Next.js 16.
 - **Skills Tailwind & Shadcn:** Consulta [SKILL.md](skills/tailwind/SKILL.md) para ver las convenciones de diseño, uso de Shadcn e IDs para depuración.
 
-## 6. Arquitectura del Proyecto (Screaming Architecture)
+## 7. Arquitectura del Proyecto (Screaming Architecture)
 
 El proyecto sigue el principio de **Screaming Architecture**, con el objetivo de que la estructura de carpetas comunique claramente la intención y las funcionalidades del sistema.
 
@@ -123,6 +123,13 @@ El proyecto sigue el principio de **Screaming Architecture**, con el objetivo de
   - `components/`: Carpeta con componentes específicos para esa página/funcionalidad.
   - `types/`: Definiciones de tipos TypeScript locales y específicos.
 - **Legibilidad:** Esta estructura busca mantener el proyecto organizado, modular y fácil de navegar, asegurando que los componentes relacionados estén agrupados lógicamente.
+
+## 8. Directrices para Asistentes de IA (Pair Programming)
+
+Para mantener la consistencia y calidad en el desarrollo asistido por IA, se deben seguir estas reglas:
+
+-   **Idioma de Documentación de Diseño:** El archivo `implementation_plan.md` debe redactarse siempre en **español**.
+-   **Uso de Contexto Actualizado:** Es obligatorio utilizar el servidor MCP `context7` para obtener la documentación más reciente de frameworks, paquetes o librerías antes de proponer cambios significativos. Esto asegura que las soluciones aprovechen las últimas características y eviten bugs conocidos.
 
 ## Flujo de Trabajo para Agregar Nuevos Agentes
 
