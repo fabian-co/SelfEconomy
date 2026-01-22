@@ -4,6 +4,7 @@ import sys
 import argparse
 import os
 import io
+import uuid
 from datetime import datetime
 
 # Force UTF-8 encoding for stdout on Windows
@@ -118,6 +119,9 @@ def process_with_template(text, template):
             date_raw = match.group(mapping.get('date', 1))
             desc_raw = match.group(mapping.get('description', 2)).strip()
             val_raw = match.group(mapping.get('value', 3))
+            
+            # Generate unique ID
+            tx['id'] = str(uuid.uuid4())
             
             # Convert date to ISO format
             tx['fecha'] = parse_date(date_raw, date_format, year_hint)
