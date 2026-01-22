@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Loader2Icon, CheckIcon } from "lucide-react";
-import { AIPreview } from "../AIPreview";
+import { IATablePreview } from "../IATablePreview";
 import { SharedStepProps } from "./types";
 
 interface AIPreviewStepProps extends SharedStepProps {
@@ -53,7 +53,7 @@ export function AIPreviewStep({
         </div>
       </div>
 
-      <AIPreview data={aiData} />
+      <IATablePreview data={aiData} />
 
       <DialogFooter className="mt-4 gap-2">
         <button
