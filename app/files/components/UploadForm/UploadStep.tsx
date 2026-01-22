@@ -24,6 +24,7 @@ interface UploadStepProps extends SharedStepProps {
   onSubmit: () => void;
   isAiProcessing: boolean;
   isValid: boolean;
+  fileExtension: string | null;
 }
 
 export function UploadStep({
@@ -45,7 +46,8 @@ export function UploadStep({
   handleCancel,
   onSubmit,
   isAiProcessing,
-  isValid
+  isValid,
+  fileExtension
 }: UploadStepProps) {
   const { register, watch } = form;
   const selectedFile = watch("file");
@@ -112,6 +114,7 @@ export function UploadStep({
         onFetchTemplates={fetchTemplates}
         onClearTemplates={clearTemplates}
         onSelectTemplate={setDetectedTemplate}
+        fileExtension={fileExtension}
       />
 
       <div className="grid gap-2">

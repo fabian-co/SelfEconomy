@@ -17,6 +17,7 @@ export interface Template {
   entity: string;
   account_type: string;
   transaction_regex: string;
+  file_types?: string[];
   [key: string]: any;
 }
 

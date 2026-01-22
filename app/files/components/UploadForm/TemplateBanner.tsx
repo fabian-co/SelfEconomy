@@ -24,7 +24,7 @@ export function TemplateBanner({
         <div>
           <h4 className="text-xs font-bold text-emerald-800 dark:text-emerald-300">¡Template detectado!</h4>
           <p className="text-[10px] text-emerald-700 dark:text-emerald-400 opacity-80">
-            Patrón para <strong>{detectedTemplate.entity}</strong>.
+            Patrón para <strong>{detectedTemplate.entity}</strong> ({detectedTemplate.file_types?.join(", ").toUpperCase()}).
           </p>
         </div>
       </div>
@@ -47,6 +47,6 @@ export function TemplateBanner({
           Ignorar y usar IA
         </button>
       </div>
-    </div>
+    </div >
   );
 }

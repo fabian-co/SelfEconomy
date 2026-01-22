@@ -1,27 +1,30 @@
 {
   "entity": "Nu Financiera",
   "account_type": "credit",
-  "signature_keywords": [
-    "NIT 901.658.107-2",
-    "Nu Financiera",
-    "Periodo facturado"
+  "file_types": [
+    "pdf"
   ],
-  "transaction_regex": "(\\d{2}\\s[A-Z]{3}(?:\\s\\d{4})?)\\s+((?:(?!\\$).)+?)\\s+\\$([\\d.,]+)",
+  "signature_keywords": [
+    "Hola, Fabian Dario",
+    "Llegó tu extracto de Noviembre",
+    "Tu cupo definido"
+  ],
+  "transaction_regex": "^(\\d{2}\\s+[A-Z]{3})\\s+(.*?)\\s+([-]?[\\d.,]+)(?:\\s+\\d+ de \\d+.*)?(?:\\s+[\\d.,]+)?$",
   "group_mapping": {
     "date": 1,
     "description": 2,
     "value": 3
   },
-  "date_format": "DD MMM YYYY",
+  "date_format": "DD MMM",
   "year_hint": 2025,
   "decimal_separator": ",",
   "thousand_separator": ".",
   "rules": {
     "default_negative": true,
     "positive_patterns": [
-      "Devoluci�n",
+      "Ajuste a tu favor",
       "Gracias por tu pago"
     ]
   },
-  "fileName": "nu_financiera_credit.json"
+  "fileName": "nu_financiera_credit_pdf.json"
 }

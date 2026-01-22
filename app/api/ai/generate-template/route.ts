@@ -7,6 +7,7 @@ import { z } from 'zod';
 const templateSchema = z.object({
   entity: z.string().describe("Nombre del banco o entidad financiera"),
   account_type: z.enum(['credit', 'debit']).describe("Tipo de cuenta"),
+  file_types: z.array(z.string()).describe("Lista de tipos de archivo compatibles (ej: ['pdf', 'csv', 'xlsx'])"),
   signature_keywords: z.array(z.string()).describe("3-5 palabras/frases únicas que identifican este tipo de extracto"),
   transaction_regex: z.string().describe("Regex con grupos de captura para fecha, descripción y monto"),
   group_mapping: z.object({
@@ -26,7 +27,7 @@ const templateSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const { text } = await req.json();
+    const { text, fileExtension } = await req.json();
 
     if (!text) {
       return NextResponse.json({ error: 'No text provided' }, { status: 400 });
@@ -37,30 +38,35 @@ export async function POST(req: Request) {
       schema: templateSchema,
       prompt: `Eres un experto en expresiones regulares y análisis de extractos bancarios. Analiza este extracto y genera un template de configuración para extraer transacciones con regex.
 
+DETECCIÓN DE FORMATO Y COMPATIBILIDAD:
+1. El archivo original tiene la extensión: ${fileExtension || 'desconocida'}
+2. Evalúa si el formato del extracto es específico para esta extensión o si el mismo "look & feel" podría estar en otros formatos.
+3. En 'file_types', incluye los formatos compatibles. Si es PDF, usualmente solo es 'pdf' a menos que el texto parezca un volcado de CSV. Si es CSV o XLSX, pon el formato correspondiente.
+
 DETECCIÓN DE FORMATO NUMÉRICO (MUY IMPORTANTE):
-Analiza los números en el extracto para determinar los separadores:
+- Analiza los números en el extracto para determinar los separadores:
 - Si ves números como "1,234.56" → thousand_separator="," y decimal_separator="."
 - Si ves números como "1.234,56" → thousand_separator="." y decimal_separator=","
 - Si ves números como "1234.56" sin separador de miles → decimal_separator="."
 - EXAMINA los montos reales en el extracto antes de decidir
 
 REGLAS CRÍTICAS PARA EL REGEX:
-1. Usa ^ y $ para anclar a inicio/fin de línea cuando las transacciones están en líneas separadas
+1. Usa ^ y $ para anclar a inicio/fin de línea cuando las transacciones están en líneas separadas. Para CSV/XLSX, el texto proporcionado es una representación CSV.
 2. El regex DEBE tener exactamente 3 grupos de captura: (fecha), (descripción), (monto)
 3. Si hay una columna de saldo después del monto, inclúyela en el regex pero NO la captures
 4. Usa .*? para descripciones (non-greedy)
 5. Para montos, captura: (-?[\\d.,]+) - incluye puntos y comas
-6. NO HARDCODEES el año en el regex - usa grupos opcionales (?:\s\d{4})? para años
+6. NO HARDCODEES el año en el regex - usa grupos opcionales (?:\\s\\d{4})? para años
 7. Usa negative lookahead (?!...) para descripciones complejas que pueden contener espacios
 
 REGLAS PARA ENTITY:
 - Usa el nombre COMPLETO del banco (ej: "Bancolombia", "Nu Financiera", "Davivienda")
-- NO uses nombres genéricos como "Banco"
 
-EJEMPLO DE TEMPLATE PARA BANCOLOMBIA (CUENTAS DE AHORRO):
+EJEMPLO DE TEMPLATE PARA BANCOLOMBIA (PDF):
 {
   "entity": "Bancolombia",
   "account_type": "debit",
+  "file_types": ["pdf"],
   "signature_keywords": ["SUCURSAL TULUA", "NÚMERO 91211257666", "SUCURSAL VIRTUAL PERSONAS"],
   "transaction_regex": "^(\\\\d{1,2}/\\\\d{1,2})\\\\s+(.*?)\\\\s+(-?[\\\\d.,]+)\\\\s+[\\\\d.,]+$",
   "group_mapping": { "date": 1, "description": 2, "value": 3 },
@@ -74,31 +80,22 @@ EJEMPLO DE TEMPLATE PARA BANCOLOMBIA (CUENTAS DE AHORRO):
   }
 }
 
-EJEMPLO PARA TARJETA DE CRÉDITO (Nu Financiera):
+EJEMPLO DE TEMPLATE PARA CSV:
 {
-  "entity": "Nu Financiera", 
-  "account_type": "credit",
-  "signature_keywords": ["NIT 901.658.107-2", "Nu Financiera", "Periodo facturado"],
-  "transaction_regex": "(\\\\d{2}\\\\s[A-Z]{3}(?:\\\\s\\\\d{4})?)\\\\s+((?:(?!\\\\$|\\\\d{2}\\\\s[A-Z]{3}).)+?)\\\\s+\\\\$([\\\\d.,]+)",
+  "entity": "Entidad Generica",
+  "account_type": "debit",
+  "file_types": ["csv", "xlsx"],
+  "signature_keywords": ["Columna1", "Columna2", "Concepto"],
+  "transaction_regex": "^(\\\\d{4}-\\\\d{2}-\\\\d{2}),(.*?),(.*?)$",
   "group_mapping": { "date": 1, "description": 2, "value": 3 },
-  "date_format": "DD MMM YYYY",
-  "year_hint": 2024,
-  "decimal_separator": ",",
-  "thousand_separator": ".",
+  "date_format": "YYYY-MM-DD",
+  "decimal_separator": ".",
+  "thousand_separator": ",",
   "rules": {
-    "default_negative": true,
-    "positive_patterns": ["Devolución", "Gracias por tu pago"]
+     "default_negative": false,
+     "positive_patterns": []
   }
 }
-
-INSTRUCCIONES FINALES:
-1. Identifica el banco/entidad financiera por su nombre completo
-2. Detecta el formato de las transacciones analizando varias líneas
-3. Crea un regex que capture TODAS las transacciones del extracto
-4. signature_keywords: Usa NITs, nombres de sucursal, números de cuenta - cosas ÚNICAS
-5. Detecta el año del extracto para year_hint
-6. Para tarjetas de crédito, default_negative=true
-7. DETECTA los separadores analizando los números en el extracto (no asumas un formato)
 
 TEXTO DEL EXTRACTO:
 ${text}`,

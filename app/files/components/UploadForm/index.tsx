@@ -49,6 +49,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   const selectedAccountType = watch("accountType");
   const selectedFile = watch("file");
   const isPDF = selectedFile?.name.toLowerCase().endsWith('.pdf');
+  const fileExtension = selectedFile?.name ? selectedFile.name.split('.').pop()?.toLowerCase() || null : null;
   const password = watch("password");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -222,6 +223,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
           password: watch("password"),
           bank: detectedTemplate.entity,
           accountType: detectedTemplate.account_type,
+          templateFileName: detectedTemplate.fileName,
           action: 'use_template'
         }),
       });
@@ -362,6 +364,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             onSubmit={onSubmit}
             isAiProcessing={isAiProcessing}
             isValid={isValid}
+            fileExtension={fileExtension}
           />
         )}
 

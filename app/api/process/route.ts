@@ -8,7 +8,7 @@ const execAsync = promisify(exec);
 
 export async function POST(request: Request) {
   try {
-    let { filePath, password, action, paymentKeywords, outputName, bank, accountType, data } = await request.json();
+    let { filePath, password, action, paymentKeywords, outputName, bank, accountType, data, templateFileName } = await request.json();
 
     if (!filePath) {
       return NextResponse.json({ error: 'Missing filePath' }, { status: 400 });
@@ -67,8 +67,24 @@ export async function POST(request: Request) {
 
     // Action: Use Template
     if (action === 'use_template') {
-      const templateFileName = `${bank}_${accountType}`.toLowerCase().replace(/\s+/g, '_') + '.json';
-      const templatePath = path.join(templatesDir, templateFileName);
+      const providedFileName = templateFileName;
+      const fileExt = path.extname(filePath).toLowerCase().replace('.', '');
+
+      let templatePath = '';
+      if (providedFileName) {
+        templatePath = path.join(templatesDir, providedFileName);
+      } else {
+        // Fallback to legacy naming or type-specific naming
+        const baseName = `${bank}_${accountType}`.toLowerCase().replace(/\s+/g, '_');
+        const typeSpecificName = `${baseName}_${fileExt}.json`;
+        const legacyName = `${baseName}.json`;
+
+        if (fs.existsSync(path.join(templatesDir, typeSpecificName))) {
+          templatePath = path.join(templatesDir, typeSpecificName);
+        } else {
+          templatePath = path.join(templatesDir, legacyName);
+        }
+      }
 
       if (!fs.existsSync(templatePath)) {
         return NextResponse.json({ error: 'Template no encontrado' }, { status: 404 });
@@ -98,6 +114,7 @@ export async function POST(request: Request) {
       }
     }
 
+
     // Action: AI Extract (New AI flow)
     if (action === 'ai_extract') {
       const tempTxtPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'temp', `${path.basename(filePath)}.txt`);
@@ -115,16 +132,24 @@ export async function POST(request: Request) {
         const normalize = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
         const normalizedContent = normalize(textContent);
 
-        // EXTRA: Check if a template MATCHES based on signature_keywords
+        // EXTRA: Check if a template MATCHES based on signature_keywords AND file type
         let matchedTemplate = null;
+        const fileExt = path.extname(filePath).toLowerCase().replace('.', '');
+
         if (fs.existsSync(templatesDir)) {
           const files = await fs.promises.readdir(templatesDir);
-          console.log(`[Templates] Buscando en ${templatesDir}... (${files.length} archivos)`);
+          console.log(`[Templates] Buscando en ${templatesDir} para tipo ${fileExt}... (${files.length} archivos)`);
 
           for (const f of files.filter(f => f.endsWith('.json'))) {
             try {
               const content = await fs.promises.readFile(path.join(templatesDir, f), 'utf-8');
               const tmp = JSON.parse(content);
+
+              // CHECK FILE TYPE COMPATIBILITY
+              if (tmp.file_types && !tmp.file_types.includes(fileExt)) {
+                console.log(`[Templates] Skip ${f}: No es compatible con ${fileExt}`);
+                continue;
+              }
 
               if (!tmp.signature_keywords || tmp.signature_keywords.length === 0) continue;
 
@@ -136,12 +161,8 @@ export async function POST(request: Request) {
               const matchPercentage = (matchesCount / tmp.signature_keywords.length) * 100;
 
               console.log(`[Templates] ${f}: ${matchesCount}/${tmp.signature_keywords.length} keywords encontradas (${matchPercentage.toFixed(1)}%)`);
-              if (matchesCount < tmp.signature_keywords.length) {
-                const missing = tmp.signature_keywords.filter((k: string) => !normalizedContent.includes(normalize(k)));
-                console.log(`[Templates] Faltan: ${missing.join(", ")}`);
-              }
 
-              // Umbral de 75% o al menos 2 si son pocas
+              // Threshold: 75% match OR at least 2/3 for small keyword sets
               if (matchPercentage >= 75 || (tmp.signature_keywords.length <= 3 && matchesCount >= 2)) {
                 matchedTemplate = { ...tmp, fileName: f };
                 console.log(`[Templates] ¡MATCH!: Usando ${f}`);
@@ -198,16 +219,24 @@ export async function POST(request: Request) {
         const normalize = (t: string) => t.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim();
         const normalizedContent = normalize(textContent);
 
-        // Step 2: Check if an existing template matches based on signature_keywords
+        // Step 2: Check if an existing template matches based on signature_keywords AND file type
         let matchedTemplate = null;
+        const fileExt = path.extname(filePath).toLowerCase().replace('.', '');
+
         if (fs.existsSync(templatesDir)) {
           const files = await fs.promises.readdir(templatesDir);
-          console.log(`[AI Template] Buscando templates existentes en ${templatesDir}... (${files.length} archivos)`);
+          console.log(`[AI Template] Buscando templates existentes en ${templatesDir} para tipo ${fileExt}... (${files.length} archivos)`);
 
           for (const f of files.filter(f => f.endsWith('.json'))) {
             try {
               const content = await fs.promises.readFile(path.join(templatesDir, f), 'utf-8');
               const tmp = JSON.parse(content);
+
+              // CHECK FILE TYPE COMPATIBILITY
+              if (tmp.file_types && !tmp.file_types.includes(fileExt)) {
+                console.log(`[AI Template] Skip ${f}: No es compatible con ${fileExt}`);
+                continue;
+              }
 
               if (!tmp.signature_keywords || tmp.signature_keywords.length === 0) continue;
 
@@ -219,10 +248,6 @@ export async function POST(request: Request) {
               const matchPercentage = (matchesCount / tmp.signature_keywords.length) * 100;
 
               console.log(`[AI Template] ${f}: ${matchesCount}/${tmp.signature_keywords.length} keywords encontradas (${matchPercentage.toFixed(1)}%)`);
-              if (matchesCount < tmp.signature_keywords.length) {
-                const missing = tmp.signature_keywords.filter((k: string) => !normalizedContent.includes(normalize(k)));
-                console.log(`[AI Template] Faltan: ${missing.join(", ")}`);
-              }
 
               // Threshold: 75% match OR at least 2/3 for small keyword sets
               if (matchPercentage >= 75 || (tmp.signature_keywords.length <= 3 && matchesCount >= 2)) {
@@ -248,7 +273,10 @@ export async function POST(request: Request) {
           const aiRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/ai/generate-template`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: textContent }),
+            body: JSON.stringify({
+              text: textContent,
+              fileExtension: fileExt
+            }),
           });
 
           if (!aiRes.ok) {
@@ -308,10 +336,17 @@ export async function POST(request: Request) {
       if (templateConfig) {
         const entityKey = templateConfig.entity.toLowerCase().replace(/\s+/g, '_');
         const accKey = templateConfig.account_type.toLowerCase();
-        const templatePath = path.join(templatesDir, `${entityKey}_${accKey}.json`);
+
+        // Include first file type in filename to avoid collisions if multiple formats exist
+        const fileType = templateConfig.file_types?.[0] || path.extname(filePath).toLowerCase().replace('.', '') || 'generic';
+        const finalFileName = `${entityKey}_${accKey}_${fileType}.json`;
+        const templatePath = path.join(templatesDir, finalFileName);
 
         await fs.promises.mkdir(templatesDir, { recursive: true });
-        await fs.promises.writeFile(templatePath, JSON.stringify(templateConfig, null, 2));
+        await fs.promises.writeFile(templatePath, JSON.stringify({
+          ...templateConfig,
+          fileName: finalFileName
+        }, null, 2));
       }
 
       // Delete source file
