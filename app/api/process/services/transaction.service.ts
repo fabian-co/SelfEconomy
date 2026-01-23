@@ -32,6 +32,48 @@ export class TransactionService {
     return outputPath;
   }
 
+  // --- VERSIONED METHODS ---
+
+  static async saveTempProcessedDataVersioned(data: any, sessionId: string, version: number): Promise<string> {
+    const tempDir = getTempProcessedDir();
+    await fs.promises.mkdir(tempDir, { recursive: true });
+
+    const outputPath = path.join(tempDir, `${sessionId}_v${version}.json`);
+    await fs.promises.writeFile(outputPath, JSON.stringify({ ...data, version }, null, 2));
+
+    return outputPath;
+  }
+
+  static async getLatestTempProcessedData(sessionId: string): Promise<{ data: any; version: number; path: string } | null> {
+    const tempDir = getTempProcessedDir();
+    if (!fs.existsSync(tempDir)) return null;
+
+    const files = await fs.promises.readdir(tempDir);
+    const sessionFiles = files.filter(f => f.startsWith(sessionId) && f.includes('_v'));
+
+    if (sessionFiles.length === 0) return null;
+
+    // Find highest version
+    let maxVersion = 0;
+    let latestFile = '';
+    for (const f of sessionFiles) {
+      const match = f.match(/_v(\d+)\.json$/);
+      if (match) {
+        const v = parseInt(match[1], 10);
+        if (v > maxVersion) {
+          maxVersion = v;
+          latestFile = f;
+        }
+      }
+    }
+
+    if (!latestFile) return null;
+
+    const fullPath = path.join(tempDir, latestFile);
+    const content = await fs.promises.readFile(fullPath, 'utf-8');
+    return { data: JSON.parse(content), version: maxVersion, path: fullPath };
+  }
+
   static async clearTempProcessedData() {
     const tempDir = getTempProcessedDir();
     const preprocessedDir = getTempPreprocessedDir();

@@ -32,6 +32,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [currentVersion, setCurrentVersion] = useState<number>(1);
 
   const form = useForm<UploadFormValues>({
     resolver: zodResolver(uploadSchema),
@@ -112,6 +114,9 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
 
       if (useAi) {
         setIsAiProcessing(true);
+        // Generate unique session ID for versioning
+        const newSessionId = `session_${Date.now()}`;
+        setSessionId(newSessionId);
         try {
           const processRes = await fetch('/api/process', {
             method: 'POST',
@@ -119,7 +124,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             body: JSON.stringify({
               filePath: uploadResult.path,
               password: values.password,
-              action: 'ai_process_with_template'
+              action: 'ai_process_with_template',
+              sessionId: newSessionId
             }),
             signal: controller.signal
           });
@@ -136,6 +142,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
           }
 
           setAiData(processData);
+          if (processData.version) setCurrentVersion(processData.version);
           if (processData.meta_info?.banco) setValue("bank", processData.meta_info.banco);
           if (processData.meta_info?.tipo_cuenta) setValue("accountType", processData.meta_info.tipo_cuenta);
 
@@ -298,7 +305,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
           password: watch("password"),
           action: 'ai_feedback',
           feedbackMessage,
-          previousTemplate: aiData?.template_config
+          previousTemplate: aiData?.template_config,
+          sessionId
         }),
       });
 
@@ -306,6 +314,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
       if (!res.ok) throw new Error(data.error || 'Error procesando feedback');
 
       setAiData(data);
+      if (data.version) setCurrentVersion(data.version);
       if (data.meta_info?.banco) setValue("bank", data.meta_info.banco);
       if (data.meta_info?.tipo_cuenta) setValue("accountType", data.meta_info.tipo_cuenta);
 

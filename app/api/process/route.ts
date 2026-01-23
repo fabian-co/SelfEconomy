@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     let {
       filePath, password, action, paymentKeywords,
       outputName, bank, accountType, data, templateFileName,
-      feedbackMessage, previousTemplate
+      feedbackMessage, previousTemplate, sessionId
     } = body;
 
     // -- Actions without filePath requirement --
@@ -112,13 +112,17 @@ export async function POST(request: Request) {
           }
         }
 
-        const tempTemplatePath = await TemplateService.saveTempTemplate(template, fileExt);
+        // Use versioned methods if sessionId is provided
+        let version = 1;
+        let tempTemplatePath;
 
-        // Explicitly delete old temp JSON to ensure fresh re-processing as requested
-        const fileName = outputName || path.basename(filePath, path.extname(filePath));
-        const oldTempJsonPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', 'temp', `${fileName}.json`);
-        if (fs.existsSync(oldTempJsonPath)) {
-          try { await fs.promises.unlink(oldTempJsonPath); } catch (e) { }
+        if (sessionId) {
+          const versionedResult = await TemplateService.saveTempTemplateVersioned(template, fileExt, sessionId);
+          tempTemplatePath = versionedResult.path;
+          version = versionedResult.version;
+          console.log(`[Versioned] Saved template v${version} for session ${sessionId}`);
+        } else {
+          tempTemplatePath = await TemplateService.saveTempTemplate(template, fileExt);
         }
 
         console.log(`[Processor] Processing with template: ${tempTemplatePath}`);
@@ -130,13 +134,18 @@ export async function POST(request: Request) {
           template_config: {
             ...template,
             fileName: path.basename(tempTemplatePath)
-          }
+          },
+          version
         };
 
-        // Save temporary JSON
-        await TransactionService.saveTempProcessedData(finalResult, filePath, outputName);
+        // Save versioned or regular temp JSON
+        if (sessionId) {
+          await TransactionService.saveTempProcessedDataVersioned(finalResult, sessionId, version);
+        } else {
+          await TransactionService.saveTempProcessedData(finalResult, filePath, outputName);
+        }
 
-        await fs.promises.unlink(tempTxtPath);
+        // Note: We no longer delete tempTxtPath here. It will be cleaned up by clearTempProcessedData on form close.
         return NextResponse.json(finalResult);
 
       } catch (err: any) {

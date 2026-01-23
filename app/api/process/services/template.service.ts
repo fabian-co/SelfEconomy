@@ -62,6 +62,72 @@ export class TemplateService {
     return tempTemplatePath;
   }
 
+  // --- VERSIONED METHODS ---
+
+  static async saveTempTemplateVersioned(template: any, fileExt: string, sessionId: string): Promise<{ path: string; version: number }> {
+    const tempDir = getTempTemplatesDir();
+    await fs.promises.mkdir(tempDir, { recursive: true });
+
+    const entityKey = template.entity.toLowerCase().replace(/\s+/g, '_');
+    const accKey = template.account_type.toLowerCase();
+    const baseFileName = `${sessionId}_${entityKey}_${accKey}_${fileExt}`;
+
+    // Find next version
+    const version = await this.getNextTempTemplateVersion(sessionId);
+    const finalFileName = `${baseFileName}_v${version}.json`;
+    const tempTemplatePath = path.join(tempDir, finalFileName);
+
+    await fs.promises.writeFile(tempTemplatePath, JSON.stringify({ ...template, version }, null, 2));
+    return { path: tempTemplatePath, version };
+  }
+
+  static async getNextTempTemplateVersion(sessionId: string): Promise<number> {
+    const tempDir = getTempTemplatesDir();
+    if (!fs.existsSync(tempDir)) return 1;
+
+    const files = await fs.promises.readdir(tempDir);
+    const sessionFiles = files.filter(f => f.startsWith(sessionId) && f.includes('_v'));
+
+    if (sessionFiles.length === 0) return 1;
+
+    const versions = sessionFiles.map(f => {
+      const match = f.match(/_v(\d+)\.json$/);
+      return match ? parseInt(match[1], 10) : 0;
+    });
+
+    return Math.max(...versions) + 1;
+  }
+
+  static async getLatestTempTemplate(sessionId: string): Promise<{ template: any; version: number; path: string } | null> {
+    const tempDir = getTempTemplatesDir();
+    if (!fs.existsSync(tempDir)) return null;
+
+    const files = await fs.promises.readdir(tempDir);
+    const sessionFiles = files.filter(f => f.startsWith(sessionId) && f.includes('_v'));
+
+    if (sessionFiles.length === 0) return null;
+
+    // Find highest version
+    let maxVersion = 0;
+    let latestFile = '';
+    for (const f of sessionFiles) {
+      const match = f.match(/_v(\d+)\.json$/);
+      if (match) {
+        const v = parseInt(match[1], 10);
+        if (v > maxVersion) {
+          maxVersion = v;
+          latestFile = f;
+        }
+      }
+    }
+
+    if (!latestFile) return null;
+
+    const fullPath = path.join(tempDir, latestFile);
+    const content = await fs.promises.readFile(fullPath, 'utf-8');
+    return { template: JSON.parse(content), version: maxVersion, path: fullPath };
+  }
+
   static async matchExistingTemplate(normalizedContent: string, fileExt: string) {
     const dir = getTemplatesDir();
     if (!fs.existsSync(dir)) return null;

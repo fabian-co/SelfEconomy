@@ -127,7 +127,7 @@ ${text.substring(0, 4000)}
 
     // --- LLAMADA A LA IA ---
     const { object } = await generateObject({
-      model: google('gemini-2.0-flash'), // Este modelo es excelente para esto
+      model: google('gemini-2.5-flash'), // Este modelo es excelente para esto
       schema: templateSchema,
       prompt: prompt,
       temperature: 0.2, // Temperatura baja para ser más preciso y menos "creativo" con el código
