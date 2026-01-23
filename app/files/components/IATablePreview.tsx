@@ -25,26 +25,6 @@ interface IATablePreviewProps {
 export function IATablePreview({ data }: IATablePreviewProps) {
   return (
     <div className="space-y-4" id="ia-table-preview-container">
-      <div className="grid grid-cols-3 gap-3" id="ia-summary-grid">
-        <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800" id="ia-summary-credits">
-          <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Total Abonos</p>
-          <p className="text-sm font-bold text-emerald-600" id="ia-total-credits-value">
-            {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(data.meta_info.resumen.total_abonos)}
-          </p>
-        </div>
-        <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800" id="ia-summary-debits">
-          <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Total Cargos</p>
-          <p className="text-sm font-bold text-rose-600" id="ia-total-debits-value">
-            {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(data.meta_info.resumen.total_cargos)}
-          </p>
-        </div>
-        <div className="bg-zinc-50 dark:bg-zinc-900/50 p-3 rounded-xl border border-zinc-100 dark:border-zinc-800" id="ia-summary-balance">
-          <p className="text-[10px] text-zinc-500 uppercase font-bold mb-1">Saldo Final</p>
-          <p className={`text-sm font-bold ${data.meta_info.resumen.saldo_actual >= 0 ? 'text-blue-600' : 'text-zinc-900 dark:text-zinc-100'}`} id="ia-current-balance-value">
-            {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(data.meta_info.resumen.saldo_actual)}
-          </p>
-        </div>
-      </div>
 
       <div className="bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-900/30 p-3 rounded-xl flex gap-3 items-start" id="ia-verification-notice">
         <InfoIcon className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />

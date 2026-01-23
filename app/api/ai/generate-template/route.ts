@@ -20,9 +20,18 @@ const templateSchema = z.object({
   decimal_separator: z.enum(['.', ',']).default(','),
   thousand_separator: z.enum(['.', ',']).default('.'),
   rules: z.object({
-    default_negative: z.boolean().describe("true si los montos son gastos por defecto (típico en TC)"),
-    positive_patterns: z.array(z.string()).describe("Regex para descripciones que son ingresos/abonos")
-  })
+    default_negative: z.boolean().describe("true si la mayoría son gastos y NO tienen signo menos (típico en extractos de TC). false si los gastos ya vienen con signo negativo."),
+    positive_patterns: z.array(z.string()).describe("Regex para descripciones que son ingresos/abonos"),
+    ignore_patterns: z.array(z.string()).describe("Regex para descripciones que deben ignorarse (ej: saldos, totales, encabezados de tabla)")
+  }),
+  validation: z.array(z.object({
+    raw_line: z.string().describe("La línea original del extracto"),
+    parsed: z.object({
+      date: z.string(),
+      description: z.string(),
+      value: z.number().describe("El valor numérico final después de aplicar default_negative")
+    })
+  })).describe("3 ejemplos extraídos del texto usando el regex configurado para validar su precisión")
 });
 
 export async function POST(req: Request) {
@@ -41,60 +50,41 @@ export async function POST(req: Request) {
 DETECCIÓN DE FORMATO Y COMPATIBILIDAD:
 1. El archivo original tiene la extensión: ${fileExtension || 'desconocida'}
 2. Evalúa si el formato del extracto es específico para esta extensión o si el mismo "look & feel" podría estar en otros formatos.
-3. En 'file_types', incluye los formatos compatibles. Si es PDF, usualmente solo es 'pdf' a menos que el texto parezca un volcado de CSV. Si es CSV o XLSX, pon el formato correspondiente.
+3. En 'file_types', incluye los formatos compatibles.
 
-DETECCIÓN DE FORMATO NUMÉRICO (MUY IMPORTANTE):
-- Analiza los números en el extracto para determinar los separadores:
-- Si ves números como "1,234.56" → thousand_separator="," y decimal_separator="."
-- Si ves números como "1.234,56" → thousand_separator="." y decimal_separator=","
-- Si ves números como "1234.56" sin separador de miles → decimal_separator="."
-- EXAMINA los montos reales en el extracto antes de decidir
+DETECCIÓN DE FORMATO NUMÉRICO:
+- Analiza si los números usan "." o "," para decimales y miles.
 
-REGLAS CRÍTICAS PARA EL REGEX:
-1. Usa ^ y $ para anclar a inicio/fin de línea cuando las transacciones están en líneas separadas. Para CSV/XLSX, el texto proporcionado es una representación CSV.
-2. El regex DEBE tener exactamente 3 grupos de captura: (fecha), (descripción), (monto)
-3. Si hay una columna de saldo después del monto, inclúyela en el regex pero NO la captures
-4. Usa .*? para descripciones (non-greedy)
-5. Para montos, captura: (-?[\\d.,]+) - incluye puntos y comas
-6. NO HARDCODEES el año en el regex - usa grupos opcionales (?:\\s\\d{4})? para años
-7. Usa negative lookahead (?!...) para descripciones complejas que pueden contener espacios
+REGLAS CRÍTICAS PARA EL REGEX Y SIGNOS:
+1. El regex DEBE capturar exactamente 3 grupos: (fecha), (descripción), (monto).
+2. 'default_negative': Es TRUE si el extracto muestra los gastos (compras) como números positivos (sin signo menos) y los ingresos (abonos) con signo o palabras clave. Esto es común en Tarjetas de Crédito.
+3. 'ignore_patterns': Identifica líneas que el regex podría capturar pero que no son transacciones (ej: "SALDO TOTAL", "PAGO MÍNIMO", "TOTAL CARGOS").
 
-REGLAS PARA ENTITY:
-- Usa el nombre COMPLETO del banco (ej: "Bancolombia", "Nu Financiera", "Davivienda")
+VALIDACIÓN (OBLIGATORIO):
+En la sección 'validation', debes incluir 3 ejemplos reales del texto que acabas de analizar.
+- 'raw_line': La línea completa tal cual aparece en el texto.
+- 'parsed': Muestra cómo quedaría la transacción después de aplicar tu regex y la lógica de 'default_negative'.
 
-EJEMPLO DE TEMPLATE PARA BANCOLOMBIA (PDF):
+EJEMPLO DE SALIDA ESPERADA:
 {
-  "entity": "Bancolombia",
-  "account_type": "debit",
+  "entity": "Banco X",
+  "account_type": "credit",
   "file_types": ["pdf"],
-  "signature_keywords": ["SUCURSAL TULUA", "NÚMERO 91211257666", "SUCURSAL VIRTUAL PERSONAS"],
-  "transaction_regex": "^(\\\\d{1,2}/\\\\d{1,2})\\\\s+(.*?)\\\\s+(-?[\\\\d.,]+)\\\\s+[\\\\d.,]+$",
+  "signature_keywords": ["ESTADO DE CUENTA", "TARJETA CERRADA"],
+  "transaction_regex": "(\\\\d{2} [A-Z]{3})\\\\s+(.*?)\\\\s+(-?[\\\\d.,]+)",
   "group_mapping": { "date": 1, "description": 2, "value": 3 },
-  "date_format": "D/M",
-  "year_hint": 2025,
-  "decimal_separator": ".",
-  "thousand_separator": ",",
+  "date_format": "DD MMM",
   "rules": {
-    "default_negative": false,
-    "positive_patterns": ["ABONO", "CONSIG", "TRANSFERENCIA DESDE", "PAGO DE NOMI", "PAGO DE PROV", "DEV CUOTA"]
-  }
-}
-
-EJEMPLO DE TEMPLATE PARA CSV:
-{
-  "entity": "Entidad Generica",
-  "account_type": "debit",
-  "file_types": ["csv", "xlsx"],
-  "signature_keywords": ["Columna1", "Columna2", "Concepto"],
-  "transaction_regex": "^(\\\\d{4}-\\\\d{2}-\\\\d{2}),(.*?),(.*?)$",
-  "group_mapping": { "date": 1, "description": 2, "value": 3 },
-  "date_format": "YYYY-MM-DD",
-  "decimal_separator": ".",
-  "thousand_separator": ",",
-  "rules": {
-     "default_negative": false,
-     "positive_patterns": []
-  }
+    "default_negative": true,
+    "positive_patterns": ["PAGO", "CREDI", "ABONO"],
+    "ignore_patterns": ["SALDO ANTERIOR", "TOTAL PAGO"]
+  },
+  "validation": [
+    {
+      "raw_line": "15 ENE COMPRA AMAZON 150.00",
+      "parsed": { "date": "15 ENE", "description": "COMPRA AMAZON", "value": -150.00 }
+    }
+  ]
 }
 
 TEXTO DEL EXTRACTO:
