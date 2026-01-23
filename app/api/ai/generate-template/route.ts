@@ -3,37 +3,75 @@ import { generateObject } from 'ai';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// Schema for template generation only (no transactions)
+// ----------------------------------------------------------------------
+// 1. DEFINICIÓN DEL SCHEMA (Tu estructura original)
+// ----------------------------------------------------------------------
 const templateSchema = z.object({
   entity: z.string().describe("Nombre del banco o entidad financiera"),
   account_type: z.enum(['credit', 'debit']).describe("Tipo de cuenta"),
-  file_types: z.array(z.string()).describe("Lista de tipos de archivo compatibles (ej: ['pdf', 'csv', 'xlsx'])"),
-  signature_keywords: z.array(z.string()).describe("3-5 palabras/frases únicas que identifican este tipo de extracto"),
-  transaction_regex: z.string().describe("Regex con grupos de captura para fecha, descripción y monto"),
+  file_types: z.array(z.string()).describe("Lista de tipos de archivo compatibles"),
+  signature_keywords: z.array(z.string()).describe("3-5 palabras/frases únicas que identifican este extracto"),
+
+  // El corazón del problema: El Regex
+  transaction_regex: z.string().describe("Regex con grupos de captura. IMPORTANTE: Usar anclas fuertes como signos de moneda ($) o formatos de fecha."),
+
   group_mapping: z.object({
     date: z.number().describe("Índice del grupo para fecha (1-based)"),
     description: z.number().describe("Índice del grupo para descripción (1-based)"),
     value: z.number().describe("Índice del grupo para monto (1-based)")
   }),
-  date_format: z.string().describe("Formato de fecha en el extracto (ej: DD MMM YYYY, DD/MM/YYYY)"),
+
+  date_format: z.string().describe("Formato de fecha (ej: DD MMM YYYY)"),
   year_hint: z.number().optional().describe("Año del extracto si se puede detectar"),
   decimal_separator: z.enum(['.', ',']).default(','),
   thousand_separator: z.enum(['.', ',']).default('.'),
+
   rules: z.object({
-    default_negative: z.boolean().describe("true si la mayoría son gastos y NO tienen signo menos (típico en extractos de TC). false si los gastos ya vienen con signo negativo."),
-    positive_patterns: z.array(z.string()).describe("Regex para descripciones que son ingresos/abonos"),
-    ignore_patterns: z.array(z.string()).describe("Regex para descripciones que deben ignorarse (ej: saldos, totales, encabezados de tabla)")
+    default_negative: z.boolean().describe("true si los gastos NO tienen signo menos"),
+    positive_patterns: z.array(z.string()).describe("Regex para identificar ingresos/pagos"),
+    ignore_patterns: z.array(z.string()).describe("Regex para líneas a ignorar (saldos, totales)")
   }),
+
+  // Esta validación es la "alucinación" de la IA, útil para contexto, 
+  // pero no confiaremos ciegamente en ella.
   validation: z.array(z.object({
-    raw_line: z.string().describe("La línea original del extracto"),
+    raw_line: z.string(),
     parsed: z.object({
       date: z.string(),
       description: z.string(),
-      value: z.number().describe("El valor numérico final después de aplicar default_negative")
+      value: z.number()
     })
-  })).describe("3 ejemplos extraídos del texto usando el regex configurado para validar su precisión")
+  })).describe("3 ejemplos extraídos mentalmente por la IA")
 });
 
+// ----------------------------------------------------------------------
+// 2. FUNCIÓN DE PRUEBA REAL (El "Juez" imparcial)
+// ----------------------------------------------------------------------
+// Esta función ejecuta el regex generado contra el texto REAL de inmediato.
+// Si esto falla, el usuario lo verá en el preview.
+function testRegexOnText(text: string, regexStr: string, mapping: any) {
+  try {
+    // Creamos el regex. 'g' para global, 'm' para multilínea.
+    const regex = new RegExp(regexStr, 'gm');
+    const matches = [...text.matchAll(regex)];
+
+    // Devolvemos las primeras 10 transacciones encontradas para que el usuario valide
+    return matches.slice(0, 10).map(m => ({
+      full_match: m[0].trim(),
+      // Mapeamos los grupos según lo que dijo la IA (1, 2, 3...)
+      extracted_date: m[mapping.date]?.trim(),
+      extracted_description: m[mapping.description]?.trim(),
+      extracted_value: m[mapping.value]?.trim(),
+    }));
+  } catch (error) {
+    console.error("Error probando regex:", error);
+    return []; // Retorna vacío si el regex es inválido sintácticamente
+  }
+}
+
+// ----------------------------------------------------------------------
+// 3. EL HANDLER PRINCIPAL
+// ----------------------------------------------------------------------
 export async function POST(req: Request) {
   try {
     const { text, fileExtension, feedback, previousTemplate } = await req.json();
@@ -42,73 +80,79 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No text provided' }, { status: 400 });
     }
 
-    let prompt = `Eres un experto en expresiones regulares y análisis de extractos bancarios. Analiza este extracto y genera un template de configuración para extraer transacciones con regex.
+    // --- CONSTRUCCIÓN DEL PROMPT ---
+    let prompt = `
+Eres un Ingeniero de Datos Senior experto en 'Regex' para Fintech.
+Tu misión: Analizar el texto de un extracto bancario y generar un JSON de configuración perfecto para extraer transacciones.
 
-DETECCIÓN DE FORMATO Y COMPATIBILIDAD:
-1. El archivo original tiene la extensión: ${fileExtension || 'desconocida'}
-2. Evalúa si el formato del extracto es específico para esta extensión o si el mismo "look & feel" podría estar en otros formatos.
-3. En 'file_types', incluye los formatos compatibles.
+INPUT DEL SISTEMA:
+- Extensión archivo: ${fileExtension || 'texto'}
+- Longitud muestra: ${text.length} caracteres
 
-DETECCIÓN DE FORMATO NUMÉRICO:
-- Analiza si los números usan "." o "," para decimales y miles.
+PRINCIPIOS CRÍTICOS DE DISEÑO (NO LOS ROMPAS):
+1. **ANCLAJE:** No uses regex débiles como '.*'. Usa anclas. Ejemplo: Si el monto siempre tiene '$', usa '\\$' en el regex.
+2. **DESCRIPCIONES:** Las descripciones de compras CONTIENEN NÚMEROS (ej: "Uber 360", "Calle 13"). 
+   - 🚫 PROHIBIDO USAR: '[^\\d]+' (esto rompe la descripción al primer número).
+   - ✅ MEJOR USAR: '((?:(?!\\$).)+?)' (Lookahead: toma todo hasta ver el signo de moneda) o '(.*?)' (Non-greedy).
+3. **ESPACIOS:** Usa siempre '\\s+' en lugar de un espacio simple ' ', ya que los PDFs a veces tienen espacios múltiples invisibles.
+4. **FECHAS:** Si la fecha está al principio de la línea, usa la estructura exacta (ej: '\\d{2}\\s[A-Z]{3}').
 
-REGLAS CRÍTICAS PARA EL REGEX Y SIGNOS:
-1. El regex DEBE capturar exactamente 3 grupos: (fecha), (descripción), (monto).
-2. 'default_negative': Es TRUE si el extracto muestra los gastos (compras) como números positivos (sin signo menos) y los ingresos (abonos) con signo o palabras clave. Esto es común en Tarjetas de Crédito.
-3. 'ignore_patterns': Identifica líneas que el regex podría capturar pero que no son transacciones (ej: "SALDO TOTAL", "PAGO MÍNIMO", "TOTAL CARGOS").
+VALIDACIÓN:
+En el campo 'validation', demuestra que tu regex funciona extrayendo 3 líneas del texto de abajo.
+`;
 
-VALIDACIÓN (OBLIGATORIO):
-En la sección 'validation', debes incluir 3 ejemplos reales del texto que acabas de analizar.
-- 'raw_line': La línea completa tal cual aparece en el texto.
-- 'parsed': Muestra cómo quedaría la transacción después de aplicar tu regex y la lógica de 'default_negative'.`;
-
+    // --- INYECCIÓN DE FEEDBACK (Lógica de Iteración) ---
     if (feedback && previousTemplate) {
       prompt += `
+\n🚨 ALERTA: MODO DE CORRECCIÓN (FEEDBACK DE USUARIO) 🚨
+El usuario ha rechazado el template anterior.
+REGEX FALLIDO: "${previousTemplate.transaction_regex}"
 
-ATENCIÓN: EL USUARIO HA PROPORCIONADO FEEDBACK SOBRE UN RESULTADO PREVIO.
-Feedback: "${feedback}"
-Template previo: ${JSON.stringify(previousTemplate, null, 2)}
+FEEDBACK DEL USUARIO: "${feedback}"
 
-Tu tarea es AJUSTAR el template previo para cumplir con el feedback del usuario, manteniendo lo que ya funcionaba bien.`;
+INSTRUCCIONES PARA LA CORRECCIÓN:
+1. NO reinicies el regex desde cero si ya capturaba bien algunas partes. Ajusta SOLO lo que falló.
+2. Si el usuario dice que faltan datos, haz el regex un poco más permisivo en los espacios.
+3. Si el usuario dice que la descripción se corta, revisa si usaste '[^\\d]' y cámbialo por un patrón que acepte todo hasta el monto.
+4. Analiza el "Texto del Extracto" abajo para encontrar el caso específico que menciona el usuario.
+`;
     }
 
+    // Agregamos el texto al final para que sea lo último en el contexto
     prompt += `
+\n--- TEXTO DEL EXTRACTO (MUESTRA RAW) ---
+${text.substring(0, 4000)} 
+--- FIN DEL TEXTO ---
+`;
 
-EJEMPLO DE SALIDA ESPERADA:
-{
-  "entity": "Banco X",
-  "account_type": "credit",
-  "file_types": ["pdf"],
-  "signature_keywords": ["ESTADO DE CUENTA", "TARJETA CERRADA"],
-  "transaction_regex": "(\\\\d{2} [A-Z]{3})\\\\s+(.*?)\\\\s+(-?[\\\\d.,]+)",
-  "group_mapping": { "date": 1, "description": 2, "value": 3 },
-  "date_format": "DD MMM",
-  "rules": {
-    "default_negative": true,
-    "positive_patterns": ["PAGO", "CREDI", "ABONO"],
-    "ignore_patterns": ["SALDO ANTERIOR", "TOTAL PAGO"]
-  },
-  "validation": [
-    {
-      "raw_line": "15 ENE COMPRA AMAZON 150.00",
-      "parsed": { "date": "15 ENE", "description": "COMPRA AMAZON", "value": -150.00 }
-    }
-  ]
-}
-
-TEXTO DEL EXTRACTO:
-${text}`;
-
+    // --- LLAMADA A LA IA ---
     const { object } = await generateObject({
-      model: google('gemini-2.0-flash'),
+      model: google('gemini-2.0-flash'), // Este modelo es excelente para esto
       schema: templateSchema,
       prompt: prompt,
+      temperature: 0.2, // Temperatura baja para ser más preciso y menos "creativo" con el código
     });
 
-    return NextResponse.json({ template: object });
+    // --- VERIFICACIÓN REAL (IR A LA FIJA) ---
+    // Ejecutamos el regex generado contra el texto real aquí mismo en el servidor
+    const livePreview = testRegexOnText(
+      text,
+      object.transaction_regex,
+      object.group_mapping
+    );
+
+    // Retornamos ambas cosas: El plan (template) y la realidad (preview)
+    return NextResponse.json({
+      template: object,
+      preview: livePreview
+    });
 
   } catch (error: any) {
     console.error('Error in AI Template Generation:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    // Manejo seguro de errores para no tumbar la app
+    return NextResponse.json(
+      { error: error.message || 'Error generando el template' },
+      { status: 500 }
+    );
   }
 }

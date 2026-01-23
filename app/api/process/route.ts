@@ -8,10 +8,12 @@ import { TransactionService } from './services/transaction.service';
 
 export async function POST(request: Request) {
   try {
+    let body = await request.json();
     let {
       filePath, password, action, paymentKeywords,
-      outputName, bank, accountType, data, templateFileName
-    } = await request.json();
+      outputName, bank, accountType, data, templateFileName,
+      feedbackMessage, previousTemplate
+    } = body;
 
     // -- Actions without filePath requirement --
     if (action === 'get_templates') {
@@ -32,7 +34,21 @@ export async function POST(request: Request) {
     const sourcePath = getSourcePath(filePath);
     const fileExt = path.extname(filePath).toLowerCase().replace('.', '');
 
-    // -- Pre-processing for PDF --
+    // -- Actions that don't require file content (skip decryption) --
+    if (action === 'save_json') {
+      await TransactionService.saveProcessedData(data, filePath, outputName);
+      if (data.template_config) {
+        await TemplateService.saveTemplate(data.template_config, fileExt);
+      }
+      return NextResponse.json({ success: true, message: 'Datos y template guardados' });
+    }
+
+    if (action === 'recalculate_json') {
+      await TransactionService.recalculateAndSave(filePath, outputName, paymentKeywords);
+      return NextResponse.json({ success: true, message: 'JSON recalculado' });
+    }
+
+    // -- Pre-processing for PDF (only for actions that need file content) --
     let currentProcessPath = sourcePath;
     if (fileExt === 'pdf') {
       const tempPdfPath = path.join(getTempPreprocessedDir(), `${path.basename(filePath)}`);
@@ -53,7 +69,15 @@ export async function POST(request: Request) {
         let template;
 
         if (action === 'ai_feedback') {
-          const { feedbackMessage, previousTemplate } = await request.json();
+
+          // Read current temp JSON if exists to provide context to AI
+          let currentData = null;
+          const fileName = path.basename(filePath, path.extname(filePath));
+          const tempPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', 'temp', `${fileName}.json`);
+          if (fs.existsSync(tempPath)) {
+            currentData = JSON.parse(await fs.promises.readFile(tempPath, 'utf-8'));
+          }
+
           console.log('[AI Feedback] Refining template with user message...');
           const aiRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/ai/generate-template`, {
             method: 'POST',
@@ -62,13 +86,15 @@ export async function POST(request: Request) {
               text,
               fileExtension: fileExt,
               feedback: feedbackMessage,
-              previousTemplate
+              previousTemplate,
+              currentTransactions: currentData?.transacciones || []
             }),
           });
 
           if (!aiRes.ok) throw new Error('Error refinando template con IA');
           const aiResult = await aiRes.json();
           template = aiResult.template;
+
         } else {
           template = await TemplateService.matchExistingTemplate(normalizedContent, fileExt);
 
@@ -87,13 +113,31 @@ export async function POST(request: Request) {
         }
 
         const tempTemplatePath = await TemplateService.saveTempTemplate(template, fileExt);
+
+        // Explicitly delete old temp JSON to ensure fresh re-processing as requested
+        const fileName = outputName || path.basename(filePath, path.extname(filePath));
+        const oldTempJsonPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', 'temp', `${fileName}.json`);
+        if (fs.existsSync(oldTempJsonPath)) {
+          try { await fs.promises.unlink(oldTempJsonPath); } catch (e) { }
+        }
+
+        console.log(`[Processor] Processing with template: ${tempTemplatePath}`);
         const result = await ProcessorService.processWithTemplate(tempTxtPath, tempTemplatePath);
 
+        // Merge updated template into result so frontend state is synced
+        const finalResult = {
+          ...result,
+          template_config: {
+            ...template,
+            fileName: path.basename(tempTemplatePath)
+          }
+        };
+
         // Save temporary JSON
-        await TransactionService.saveTempProcessedData(result, filePath, outputName);
+        await TransactionService.saveTempProcessedData(finalResult, filePath, outputName);
 
         await fs.promises.unlink(tempTxtPath);
-        return NextResponse.json(result);
+        return NextResponse.json(finalResult);
 
       } catch (err: any) {
         if (err.message === 'PASSWORD_REQUIRED') return NextResponse.json({ error: 'PASSWORD_REQUIRED' }, { status: 401 });
@@ -124,20 +168,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, text, matchedTemplate });
     }
 
-    // -- Action: Save JSON & Template --
-    if (action === 'save_json') {
-      await TransactionService.saveProcessedData(data, filePath, outputName);
-      if (data.template_config) {
-        await TemplateService.saveTemplate(data.template_config, fileExt);
-      }
-      return NextResponse.json({ success: true, message: 'Datos y template guardados' });
-    }
-
-    // -- Action: Recalculate JSON --
-    if (action === 'recalculate_json') {
-      await TransactionService.recalculateAndSave(filePath, outputName, paymentKeywords);
-      return NextResponse.json({ success: true, message: 'JSON recalculado' });
-    }
 
     // -- Default / Legacy Actions (Analyze, Process) --
     const bankId = bank || (filePath.toLowerCase().includes('nu') ? 'nu' : 'bancolombia');

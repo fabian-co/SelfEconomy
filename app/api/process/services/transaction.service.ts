@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { getProcessedDir, getTempProcessedDir, getTempPreprocessedDir } from '../lib/utils';
+import { getProcessedDir, getTempProcessedDir, getTempPreprocessedDir, getTempDir } from '../lib/utils';
 
 export class TransactionService {
   static async saveProcessedData(data: any, filePath: string, outputName?: string) {
@@ -56,6 +56,22 @@ export class TransactionService {
           await fs.promises.unlink(path.join(preprocessedDir, f));
         } catch (e) {
           console.warn(`Could not delete temp preprocessed file: ${f}`, e);
+        }
+      }
+    }
+
+    // Clear temp extractions (.txt)
+    const tempDirRaw = getTempDir();
+    if (fs.existsSync(tempDirRaw)) {
+      const files = await fs.promises.readdir(tempDirRaw);
+      for (const f of files) {
+        const fullPath = path.join(tempDirRaw, f);
+        if (fs.statSync(fullPath).isFile()) {
+          try {
+            await fs.promises.unlink(fullPath);
+          } catch (e) {
+            console.warn(`Could not delete temp extraction file: ${f}`, e);
+          }
         }
       }
     }
