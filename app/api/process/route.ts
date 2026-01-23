@@ -10,6 +10,36 @@ export async function POST(request: Request) {
   try {
     let { filePath, password, action, paymentKeywords, outputName, bank, accountType, data, templateFileName } = await request.json();
 
+    // Action: Get Templates (Move up to allow null filePath)
+    const templatesDir = path.join(process.cwd(), 'custom-data', 'templates');
+    if (action === 'get_templates') {
+      if (!fs.existsSync(templatesDir)) return NextResponse.json({ templates: [] });
+      const files = await fs.promises.readdir(templatesDir);
+      const templates = await Promise.all(
+        files.filter(f => f.endsWith('.json')).map(async f => {
+          const content = await fs.promises.readFile(path.join(templatesDir, f), 'utf-8');
+          return JSON.parse(content);
+        })
+      );
+      return NextResponse.json({ templates });
+    }
+
+    // Action: Clear Temp Templates
+    if (action === 'clear_temp') {
+      const tempTemplatesDir = path.join(templatesDir, 'temp');
+      if (fs.existsSync(tempTemplatesDir)) {
+        const tempFiles = await fs.promises.readdir(tempTemplatesDir);
+        for (const f of tempFiles) {
+          try {
+            await fs.promises.unlink(path.join(tempTemplatesDir, f));
+          } catch (e) {
+            console.warn(`Could not delete temp template file: ${f}`, e);
+          }
+        }
+      }
+      return NextResponse.json({ success: true, message: 'Carpeta temp limpiada' });
+    }
+
     if (!filePath) {
       return NextResponse.json({ error: 'Missing filePath' }, { status: 400 });
     }
@@ -50,20 +80,6 @@ export async function POST(request: Request) {
     const extractScriptPath = path.join(process.cwd(), 'app', 'api', 'py', 'extract_text.py');
     const pythonPath = path.join(process.cwd(), 'venv', 'Scripts', 'python.exe');
 
-    const templatesDir = path.join(process.cwd(), 'custom-data', 'templates');
-
-    // Action: Get Templates
-    if (action === 'get_templates') {
-      if (!fs.existsSync(templatesDir)) return NextResponse.json({ templates: [] });
-      const files = await fs.promises.readdir(templatesDir);
-      const templates = await Promise.all(
-        files.filter(f => f.endsWith('.json')).map(async f => {
-          const content = await fs.promises.readFile(path.join(templatesDir, f), 'utf-8');
-          return JSON.parse(content);
-        })
-      );
-      return NextResponse.json({ templates });
-    }
 
     // Action: Use Template
     if (action === 'use_template') {
@@ -290,7 +306,15 @@ export async function POST(request: Request) {
         }
 
         // Step 4: Save template to file for template_processor
-        const tempTemplatePath = path.join(process.cwd(), 'app', 'api', 'extracto', 'temp', `template_${Date.now()}.json`);
+        const tempTemplatesDir = path.join(templatesDir, 'temp');
+        await fs.promises.mkdir(tempTemplatesDir, { recursive: true });
+
+        const entityKey = template.entity.toLowerCase().replace(/\s+/g, '_');
+        const accKey = template.account_type.toLowerCase();
+        const finalFileName = `${entityKey}_${accKey}_${fileExt}.json`;
+        const tempTemplatePath = path.join(tempTemplatesDir, finalFileName);
+
+        console.log('[AI Template] Guardando template temporal en:', tempTemplatePath);
         await fs.promises.writeFile(tempTemplatePath, JSON.stringify(template, null, 2));
 
         // Step 5: Process with template_processor.py
@@ -302,7 +326,7 @@ export async function POST(request: Request) {
 
         // Cleanup temp files
         await fs.promises.unlink(tempTxtPath);
-        await fs.promises.unlink(tempTemplatePath);
+        // We keep the temp template for now as per user request to have it in template/temp
 
         const result = JSON.parse(stdout);
         if (result.error) throw new Error(result.error);
@@ -347,6 +371,19 @@ export async function POST(request: Request) {
           ...templateConfig,
           fileName: finalFileName
         }, null, 2));
+
+        // Clean up temp templates folder
+        const tempTemplatesDir = path.join(templatesDir, 'temp');
+        if (fs.existsSync(tempTemplatesDir)) {
+          const tempFiles = await fs.promises.readdir(tempTemplatesDir);
+          for (const f of tempFiles) {
+            try {
+              await fs.promises.unlink(path.join(tempTemplatesDir, f));
+            } catch (e) {
+              console.warn(`Could not delete temp template file: ${f}`, e);
+            }
+          }
+        }
       }
 
       // Delete source file

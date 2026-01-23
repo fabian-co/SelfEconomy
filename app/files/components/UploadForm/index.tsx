@@ -316,6 +316,13 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   };
 
   const handleClose = () => {
+    // Cleanup temporary templates on close
+    fetch('/api/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'clear_temp', filePath: 'cleanup' }),
+    }).catch(err => console.error("Error clearing temp templates:", err));
+
     onClose();
     setTimeout(() => {
       reset();
