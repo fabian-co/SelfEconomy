@@ -32,24 +32,45 @@ export async function POST(request: Request) {
     const fileExt = path.extname(filePath).toLowerCase().replace('.', '');
 
     // -- Action: AI Process with Template --
-    if (action === 'ai_process_with_template') {
+    if (action === 'ai_process_with_template' || action === 'ai_feedback') {
       try {
         const { text, tempTxtPath } = await ProcessorService.extractText(sourcePath, password);
         const normalizedContent = normalizeText(text);
 
-        let template = await TemplateService.matchExistingTemplate(normalizedContent, fileExt);
+        let template;
 
-        if (!template) {
-          console.log('[AI Template] No match. Generating with AI...');
+        if (action === 'ai_feedback') {
+          const { feedbackMessage, previousTemplate } = await request.json();
+          console.log('[AI Feedback] Refining template with user message...');
           const aiRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/ai/generate-template`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, fileExtension: fileExt }),
+            body: JSON.stringify({
+              text,
+              fileExtension: fileExt,
+              feedback: feedbackMessage,
+              previousTemplate
+            }),
           });
 
-          if (!aiRes.ok) throw new Error('Error generando template con IA');
+          if (!aiRes.ok) throw new Error('Error refinando template con IA');
           const aiResult = await aiRes.json();
           template = aiResult.template;
+        } else {
+          template = await TemplateService.matchExistingTemplate(normalizedContent, fileExt);
+
+          if (!template) {
+            console.log('[AI Template] No match. Generating with AI...');
+            const aiRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/ai/generate-template`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text, fileExtension: fileExt }),
+            });
+
+            if (!aiRes.ok) throw new Error('Error generando template con IA');
+            const aiResult = await aiRes.json();
+            template = aiResult.template;
+          }
         }
 
         const tempTemplatePath = await TemplateService.saveTempTemplate(template, fileExt);

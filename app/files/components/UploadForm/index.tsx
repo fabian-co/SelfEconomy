@@ -31,6 +31,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   const [extractedText, setExtractedText] = useState<string>("");
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isChatLoading, setIsChatLoading] = useState(false);
 
   const form = useForm<UploadFormValues>({
     resolver: zodResolver(uploadSchema),
@@ -286,6 +287,36 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
     }
   };
 
+  const handleAiFeedback = async (feedbackMessage: string) => {
+    setIsChatLoading(true);
+    try {
+      const res = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filePath: uploadedFilePath,
+          password: watch("password"),
+          action: 'ai_feedback',
+          feedbackMessage,
+          previousTemplate: aiData?.template_config
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error procesando feedback');
+
+      setAiData(data);
+      if (data.meta_info?.banco) setValue("bank", data.meta_info.banco);
+      if (data.meta_info?.tipo_cuenta) setValue("accountType", data.meta_info.tipo_cuenta);
+
+    } catch (error: any) {
+      toast.error(error.message);
+      throw error;
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
   const processFile = async (filePath: string, paymentKeywords: string[] = []) => {
     setIsUploading(true);
     try {
@@ -341,9 +372,11 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
     await handleSubmit(handleAnalysis)();
   };
 
+  const dialogWidth = step === 'ai_preview' ? "sm:max-w-[1100px]" : "sm:max-w-[500px]";
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className={`${dialogWidth} transition-all duration-300`}>
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
             {step === 'upload' ? 'Upload & Process' : step === 'ai_preview' ? 'Verificación IA' : 'Configurar Pagos'}
@@ -382,6 +415,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             aiData={aiData}
             onBack={() => setStep('upload')}
             onConfirm={handleAiConfirm}
+            onFeedback={handleAiFeedback}
+            isChatLoading={isChatLoading}
           />
         )}
 

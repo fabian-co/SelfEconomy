@@ -36,16 +36,13 @@ const templateSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const { text, fileExtension } = await req.json();
+    const { text, fileExtension, feedback, previousTemplate } = await req.json();
 
     if (!text) {
       return NextResponse.json({ error: 'No text provided' }, { status: 400 });
     }
 
-    const { object } = await generateObject({
-      model: google('gemini-2.0-flash'),
-      schema: templateSchema,
-      prompt: `Eres un experto en expresiones regulares y análisis de extractos bancarios. Analiza este extracto y genera un template de configuración para extraer transacciones con regex.
+    let prompt = `Eres un experto en expresiones regulares y análisis de extractos bancarios. Analiza este extracto y genera un template de configuración para extraer transacciones con regex.
 
 DETECCIÓN DE FORMATO Y COMPATIBILIDAD:
 1. El archivo original tiene la extensión: ${fileExtension || 'desconocida'}
@@ -63,7 +60,19 @@ REGLAS CRÍTICAS PARA EL REGEX Y SIGNOS:
 VALIDACIÓN (OBLIGATORIO):
 En la sección 'validation', debes incluir 3 ejemplos reales del texto que acabas de analizar.
 - 'raw_line': La línea completa tal cual aparece en el texto.
-- 'parsed': Muestra cómo quedaría la transacción después de aplicar tu regex y la lógica de 'default_negative'.
+- 'parsed': Muestra cómo quedaría la transacción después de aplicar tu regex y la lógica de 'default_negative'.`;
+
+    if (feedback && previousTemplate) {
+      prompt += `
+
+ATENCIÓN: EL USUARIO HA PROPORCIONADO FEEDBACK SOBRE UN RESULTADO PREVIO.
+Feedback: "${feedback}"
+Template previo: ${JSON.stringify(previousTemplate, null, 2)}
+
+Tu tarea es AJUSTAR el template previo para cumplir con el feedback del usuario, manteniendo lo que ya funcionaba bien.`;
+    }
+
+    prompt += `
 
 EJEMPLO DE SALIDA ESPERADA:
 {
@@ -88,7 +97,12 @@ EJEMPLO DE SALIDA ESPERADA:
 }
 
 TEXTO DEL EXTRACTO:
-${text}`,
+${text}`;
+
+    const { object } = await generateObject({
+      model: google('gemini-2.0-flash'),
+      schema: templateSchema,
+      prompt: prompt,
     });
 
     return NextResponse.json({ template: object });

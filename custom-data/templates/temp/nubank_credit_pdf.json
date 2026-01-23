@@ -1,0 +1,59 @@
+{
+  "entity": "NuBank",
+  "account_type": "credit",
+  "file_types": [
+    "pdf"
+  ],
+  "signature_keywords": [
+    "Llegó tu extracto",
+    "Deuda a pagar este mes",
+    "Tu cupo definido"
+  ],
+  "transaction_regex": "(\\d{2} [A-Z]{3}\\s+\\d{4})\\s+([\\w\\s\\*\\.\\,]+)\\s+([\\d\\.\\,]+)",
+  "group_mapping": {
+    "date": 1,
+    "description": 2,
+    "value": 3
+  },
+  "date_format": "DD MMM YYYY",
+  "decimal_separator": ",",
+  "thousand_separator": ".",
+  "rules": {
+    "default_negative": true,
+    "positive_patterns": [
+      "Gracias por tu pago"
+    ],
+    "ignore_patterns": [
+      "Fecha Descripción Valor Cuotas",
+      "Pago mínimo",
+      "PAGO HASTA EL",
+      "Resumen de tu extracto"
+    ]
+  },
+  "validation": [
+    {
+      "raw_line": "26 JUL 2025 Quest N $20.000,00",
+      "parsed": {
+        "date": "26 JUL 2025",
+        "description": "Quest N ",
+        "value": -20000
+      }
+    },
+    {
+      "raw_line": "24 JUL 2025 Gracias por tu $95.990,00",
+      "parsed": {
+        "date": "24 JUL 2025",
+        "description": "Gracias por tu ",
+        "value": 95990
+      }
+    },
+    {
+      "raw_line": "23 JUL 2025 Movistar $25.990,00",
+      "parsed": {
+        "date": "23 JUL 2025",
+        "description": "Movistar Pagosepayco",
+        "value": -25990
+      }
+    }
+  ]
+}
