@@ -62,6 +62,12 @@ export function UploadStep({
           id="extractName"
           placeholder="Ej: Extracto Octubre 2023"
           {...register("extractName")}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !isUploading && isValid) {
+              e.preventDefault();
+              onSubmit();
+            }
+          }}
           className={`rounded-xl ${form.formState.errors.extractName ? 'border-rose-500 focus-visible:ring-rose-500/20' : ''}`}
         />
         {form.formState.errors.extractName && (
@@ -82,6 +88,12 @@ export function UploadStep({
             onChange={(e) => {
               register("password").onChange(e);
               if (passwordError) setPasswordError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !isUploading && isValid) {
+                e.preventDefault();
+                onSubmit();
+              }
             }}
             className={`rounded-xl ${passwordError ? 'border-rose-500 focus-visible:ring-rose-500/20' : ''}`}
           />
