@@ -13,3 +13,5 @@ export const getPythonPath = () => path.join(process.cwd(), 'venv', 'Scripts', '
 export const getScriptPath = (name: string) => path.join(process.cwd(), 'app', 'api', 'py', name);
 export const getTemplatesDir = () => path.join(process.cwd(), 'custom-data', 'templates');
 export const getTempTemplatesDir = () => path.join(getTemplatesDir(), 'temp');
+export const getProcessedDir = () => path.join(process.cwd(), 'app', 'api', 'extracto', 'processed');
+export const getTempProcessedDir = () => path.join(getProcessedDir(), 'temp');

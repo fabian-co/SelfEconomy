@@ -21,7 +21,8 @@ export async function POST(request: Request) {
 
     if (action === 'clear_temp') {
       await TemplateService.clearTempTemplates();
-      return NextResponse.json({ success: true, message: 'Carpeta temp limpiada' });
+      await TransactionService.clearTempProcessedData();
+      return NextResponse.json({ success: true, message: 'Carpetas temp limpiadas' });
     }
 
     if (!filePath) {
@@ -75,6 +76,9 @@ export async function POST(request: Request) {
 
         const tempTemplatePath = await TemplateService.saveTempTemplate(template, fileExt);
         const result = await ProcessorService.processWithTemplate(tempTxtPath, tempTemplatePath);
+
+        // Save temporary JSON
+        await TransactionService.saveTempProcessedData(result, filePath, outputName);
 
         await fs.promises.unlink(tempTxtPath);
         return NextResponse.json(result);

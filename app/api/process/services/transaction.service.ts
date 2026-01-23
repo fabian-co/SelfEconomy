@@ -1,19 +1,49 @@
 import fs from 'fs';
 import path from 'path';
+import { getProcessedDir, getTempProcessedDir } from '../lib/utils';
 
 export class TransactionService {
   static async saveProcessedData(data: any, filePath: string, outputName?: string) {
     const fileName = outputName || path.basename(filePath, path.extname(filePath));
-    const outputPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', `${fileName}.json`);
+    const processedDir = getProcessedDir();
+    const outputPath = path.join(processedDir, `${fileName}.json`);
 
-    await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
+    await fs.promises.mkdir(processedDir, { recursive: true });
     await fs.promises.writeFile(outputPath, JSON.stringify(data, null, 2));
+
+    // Clear temp files after confirmed save
+    await this.clearTempProcessedData();
 
     // Delete source file
     const sourcePath = path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), 'app', 'api', 'extracto', filePath);
     try { await fs.promises.unlink(sourcePath); } catch (e) { }
 
     return outputPath;
+  }
+
+  static async saveTempProcessedData(data: any, filePath: string, outputName?: string) {
+    const fileName = outputName || path.basename(filePath, path.extname(filePath));
+    const tempDir = getTempProcessedDir();
+    const outputPath = path.join(tempDir, `${fileName}.json`);
+
+    await fs.promises.mkdir(tempDir, { recursive: true });
+    await fs.promises.writeFile(outputPath, JSON.stringify(data, null, 2));
+
+    return outputPath;
+  }
+
+  static async clearTempProcessedData() {
+    const tempDir = getTempProcessedDir();
+    if (fs.existsSync(tempDir)) {
+      const files = await fs.promises.readdir(tempDir);
+      for (const f of files) {
+        try {
+          await fs.promises.unlink(path.join(tempDir, f));
+        } catch (e) {
+          console.warn(`Could not delete temp processed file: ${f}`, e);
+        }
+      }
+    }
   }
 
   static calculateTotals(data: any, paymentKeywords: string[]) {
