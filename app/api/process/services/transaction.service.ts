@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { getProcessedDir, getTempProcessedDir } from '../lib/utils';
+import { getProcessedDir, getTempProcessedDir, getTempPreprocessedDir } from '../lib/utils';
 
 export class TransactionService {
   static async saveProcessedData(data: any, filePath: string, outputName?: string) {
@@ -34,6 +34,9 @@ export class TransactionService {
 
   static async clearTempProcessedData() {
     const tempDir = getTempProcessedDir();
+    const preprocessedDir = getTempPreprocessedDir();
+
+    // Clear temp processed JSONs
     if (fs.existsSync(tempDir)) {
       const files = await fs.promises.readdir(tempDir);
       for (const f of files) {
@@ -41,6 +44,18 @@ export class TransactionService {
           await fs.promises.unlink(path.join(tempDir, f));
         } catch (e) {
           console.warn(`Could not delete temp processed file: ${f}`, e);
+        }
+      }
+    }
+
+    // Clear temp preprocessed PDFs
+    if (fs.existsSync(preprocessedDir)) {
+      const files = await fs.promises.readdir(preprocessedDir);
+      for (const f of files) {
+        try {
+          await fs.promises.unlink(path.join(preprocessedDir, f));
+        } catch (e) {
+          console.warn(`Could not delete temp preprocessed file: ${f}`, e);
         }
       }
     }

@@ -55,3 +55,7 @@ custom-data/rules
 custom-data/data_Antigravity
 
 app/api/extracto/other/default/*pdf
+app/api/extracto/processed/temp/*json
+app/api/extracto/temp/preprocessed/*pdf
+
+custom-data/templates/temp/*

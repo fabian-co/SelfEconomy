@@ -15,3 +15,4 @@ export const getTemplatesDir = () => path.join(process.cwd(), 'custom-data', 'te
 export const getTempTemplatesDir = () => path.join(getTemplatesDir(), 'temp');
 export const getProcessedDir = () => path.join(process.cwd(), 'app', 'api', 'extracto', 'processed');
 export const getTempProcessedDir = () => path.join(getProcessedDir(), 'temp');
+export const getTempPreprocessedDir = () => path.join(process.cwd(), 'app', 'api', 'extracto', 'temp', 'preprocessed');

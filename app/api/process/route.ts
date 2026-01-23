@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import path from 'path';
 import fs from 'fs';
-import { getSourcePath, normalizeText } from './lib/utils';
+import { getSourcePath, normalizeText, getTempPreprocessedDir } from './lib/utils';
 import { TemplateService } from './services/template.service';
 import { ProcessorService } from './services/processor.service';
 import { TransactionService } from './services/transaction.service';
@@ -32,10 +32,22 @@ export async function POST(request: Request) {
     const sourcePath = getSourcePath(filePath);
     const fileExt = path.extname(filePath).toLowerCase().replace('.', '');
 
+    // -- Pre-processing for PDF --
+    let currentProcessPath = sourcePath;
+    if (fileExt === 'pdf') {
+      const tempPdfPath = path.join(getTempPreprocessedDir(), `${path.basename(filePath)}`);
+      try {
+        currentProcessPath = await ProcessorService.decryptPdf(sourcePath, tempPdfPath, password);
+      } catch (err: any) {
+        if (err.message === 'PASSWORD_REQUIRED') return NextResponse.json({ error: 'PASSWORD_REQUIRED' }, { status: 401 });
+        throw err;
+      }
+    }
+
     // -- Action: AI Process with Template --
     if (action === 'ai_process_with_template' || action === 'ai_feedback') {
       try {
-        const { text, tempTxtPath } = await ProcessorService.extractText(sourcePath, password);
+        const { text, tempTxtPath } = await ProcessorService.extractText(currentProcessPath, password);
         const normalizedContent = normalizeText(text);
 
         let template;
@@ -133,7 +145,7 @@ export async function POST(request: Request) {
     const fileName = path.basename(filePath, path.extname(filePath));
     const outputPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', `${outputName || fileName}.json`);
 
-    await ProcessorService.runLegacyScript(bankId, accId, sourcePath, outputPath, { password, analyze: action === 'analyze', paymentKeywords });
+    await ProcessorService.runLegacyScript(bankId, accId, currentProcessPath, outputPath, { password, analyze: action === 'analyze', paymentKeywords });
 
     if (action === 'analyze') {
       const analyzeContent = await fs.promises.readFile(outputPath, 'utf-8');

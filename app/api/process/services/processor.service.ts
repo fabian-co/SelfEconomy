@@ -55,4 +55,19 @@ export class ProcessorService {
     }
     return stdout;
   }
+
+  static async decryptPdf(sourcePath: string, outputPath: string, password?: string) {
+    let cmd = `"${getPythonPath()}" "${getScriptPath('decrypt_pdf.py')}" --input "${sourcePath}" --output "${outputPath}"`;
+    if (password) cmd += ` --password "${password}"`;
+
+    try {
+      await execAsync(cmd);
+      return outputPath;
+    } catch (err: any) {
+      if (err.code === 10 || (err.stderr && err.stderr.includes("PASSWORD_REQUIRED"))) {
+        throw new Error('PASSWORD_REQUIRED');
+      }
+      throw err;
+    }
+  }
 }
