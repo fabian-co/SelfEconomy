@@ -96,6 +96,7 @@ export function TransactionItem({
           categoryId={categoryId}
           categoryName={categoryName}
           transactionId={transactionId}
+          amount={value}
           isMarkedPositive={isMarkedPositive}
           isPositiveGlobal={isPositiveGlobal}
           isIgnored={isIgnored}

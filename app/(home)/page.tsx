@@ -119,9 +119,9 @@ export default function Home() {
             isIgnoredGlobal = false;
           }
 
-          // If marked as positive and value is negative, make it positive
-          if (isMarkedPositive && valor < 0) {
-            valor = Math.abs(valor);
+          // If marked as positive, flip the sign (income becomes expense, expense becomes income)
+          if (isMarkedPositive) {
+            valor = -valor;
           }
 
           return {

@@ -29,6 +29,7 @@ interface TransactionEditorProps {
   isPositiveGlobal?: boolean;
   isIgnored?: boolean;
   isIgnoredGlobal?: boolean;
+  amount: number;
   onSave: (data: {
     originalDescription: string,
     description: string,
@@ -54,6 +55,7 @@ export function TransactionEditor({
   isPositiveGlobal,
   isIgnored,
   isIgnoredGlobal,
+  amount,
   onSave,
   trigger
 }: TransactionEditorProps) {
@@ -333,7 +335,7 @@ export function TransactionEditor({
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-500" />
                 <Label htmlFor="markAsPositive" className="text-sm font-medium text-emerald-700 dark:text-emerald-400 cursor-pointer">
-                  Marcar como ingreso (positiva)
+                  {amount < 0 ? "Marcar como ingreso (positiva)" : "Marcar como ingreso (negativa)"}
                 </Label>
               </div>
               <Switch
