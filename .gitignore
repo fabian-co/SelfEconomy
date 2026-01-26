@@ -58,4 +58,4 @@ app/api/extracto/other/default/*pdf
 app/api/extracto/processed/temp/*json
 app/api/extracto/temp/preprocessed/*pdf
 
-custom-data/templates/temp/*
+custom-data/templates/*
