@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { MonthNavigation } from "./MonthNavigation";
 import { TransactionItem } from "./TransactionItem";
 import { GroupedTransaction } from "../types/index";
-import { PlusCircle, Tag, ChevronDown, ChevronRight } from "lucide-react";
+import { PlusCircle, Tag, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryManager } from "./category-manager/CategoryManager";
 import { useRouter } from "next/navigation";
@@ -32,6 +32,7 @@ export function TransactionList({
   // Use a set of expanded IDs instead of collapsed for easier "collapsed by default" logic
   // "uncategorized" is expanded by default as requested.
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["uncategorized"]));
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchCategories = () => {
     fetch("/api/categories")
@@ -47,9 +48,17 @@ export function TransactionList({
   const categorizedGroups = useMemo(() => {
     if (!currentGroup) return [];
 
+    const query = searchQuery.toLowerCase().trim();
+    const filteredTransactions = query
+      ? currentGroup.transactions.filter(tx =>
+        tx.descripcion?.toLowerCase().includes(query) ||
+        tx.originalDescription?.toLowerCase().includes(query)
+      )
+      : currentGroup.transactions;
+
     const groups: Record<string, any> = {};
 
-    currentGroup.transactions.forEach(tx => {
+    filteredTransactions.forEach(tx => {
       const catId = tx.categoryId || "uncategorized";
       if (!groups[catId]) {
         const category = categories.find(c => c.id === catId);
@@ -74,7 +83,7 @@ export function TransactionList({
       if (b.id === "uncategorized") return -1;
       return a.name.localeCompare(b.name);
     });
-  }, [currentGroup, categories]);
+  }, [currentGroup, categories, searchQuery]);
 
   const handleUpdateTransaction = async (data: any) => {
     let categorySuccess = true;
@@ -132,6 +141,18 @@ export function TransactionList({
         canGoPrev={canGoPrev}
         canGoNext={canGoNext}
       />
+
+      {/* Search Input */}
+      <div className="relative">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Buscar transacción..."
+          className="w-full pl-11 pr-4 py-3 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+        />
+      </div>
 
       <div id="category-banner" className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-100 dark:border-blue-900/30 rounded-2xl px-6 py-4 shadow-sm">
         <div className="flex items-center justify-between">
