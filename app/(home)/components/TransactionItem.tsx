@@ -15,6 +15,7 @@ interface TransactionItemProps {
   categoryName?: string;
   categoryIcon?: string;
   transactionId?: string;
+  originalValor?: number;
   isMarkedPositive?: boolean;
   isPositiveGlobal?: boolean;
   isIgnored?: boolean;
@@ -34,6 +35,7 @@ export function TransactionItem({
   categoryName,
   categoryIcon,
   transactionId,
+  originalValor,
   isMarkedPositive,
   isPositiveGlobal,
   isIgnored,
@@ -96,7 +98,8 @@ export function TransactionItem({
           categoryId={categoryId}
           categoryName={categoryName}
           transactionId={transactionId}
-          amount={value}
+          currentAmount={value}
+          originalAmount={originalValor ?? value}
           isMarkedPositive={isMarkedPositive}
           isPositiveGlobal={isPositiveGlobal}
           isIgnored={isIgnored}

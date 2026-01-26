@@ -29,7 +29,8 @@ interface TransactionEditorProps {
   isPositiveGlobal?: boolean;
   isIgnored?: boolean;
   isIgnoredGlobal?: boolean;
-  amount: number;
+  currentAmount: number;
+  originalAmount: number;
   onSave: (data: {
     originalDescription: string,
     description: string,
@@ -55,7 +56,8 @@ export function TransactionEditor({
   isPositiveGlobal,
   isIgnored,
   isIgnoredGlobal,
-  amount,
+  currentAmount,
+  originalAmount,
   onSave,
   trigger
 }: TransactionEditorProps) {
@@ -329,41 +331,57 @@ export function TransactionEditor({
             </label>
           </div>
 
-          {/* Mark as Positive Section */}
-          <div className={`space-y-3 p-4 rounded-xl border ${amount < 0
+          {/* Mark as Positive (Flip Sign) Section */}
+          <div className={`space-y-3 p-4 rounded-xl border transition-colors duration-300 ${(originalAmount < 0 && !markAsPositive) || (originalAmount > 0 && markAsPositive)
               ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/30"
               : "bg-rose-50 dark:bg-rose-950/20 border-rose-100 dark:border-rose-900/30"
             }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <TrendingUp className={`h-4 w-4 ${amount < 0 ? "text-emerald-600 dark:text-emerald-500" : "text-rose-600 dark:text-rose-500"}`} />
-                <Label htmlFor="markAsPositive" className={`text-sm font-medium cursor-pointer ${amount < 0 ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
+                <TrendingUp className={`h-4 w-4 ${(originalAmount < 0 && !markAsPositive) || (originalAmount > 0 && markAsPositive)
+                    ? "text-emerald-600 dark:text-emerald-500"
+                    : "text-rose-600 dark:text-rose-500"
+                  }`} />
+                <Label htmlFor="markAsPositive" className={`text-sm font-medium cursor-pointer ${(originalAmount < 0 && !markAsPositive) || (originalAmount > 0 && markAsPositive)
+                    ? "text-emerald-700 dark:text-emerald-400"
+                    : "text-rose-700 dark:text-rose-400"
                   }`}>
-                  {amount < 0 ? "Marcar como ingreso (positiva)" : "Marcar como ingreso (negativa)"}
+                  {originalAmount < 0
+                    ? (markAsPositive ? "Desmarcar como ingreso (negativa)" : "Marcar como ingreso (positiva)")
+                    : (markAsPositive ? "Desmarcar como egreso (positiva)" : "Marcar como egreso (negativa)")
+                  }
                 </Label>
               </div>
               <Switch
                 id="markAsPositive"
                 checked={markAsPositive}
                 onCheckedChange={setMarkAsPositive}
-                className={amount > 0 ? "data-[state=checked]:bg-rose-500" : ""}
+                className={
+                  (originalAmount < 0 && markAsPositive) || (originalAmount > 0 && !markAsPositive)
+                    ? "data-[state=checked]:bg-rose-500"
+                    : "data-[state=checked]:bg-emerald-600"
+                }
               />
             </div>
             {markAsPositive && (
-              <div className={`flex items-center space-x-2 pt-2 border-t ${amount < 0 ? "border-emerald-100 dark:border-emerald-900/30" : "border-rose-100 dark:border-rose-900/30"
+              <div className={`flex items-center space-x-2 pt-2 border-t ${(originalAmount < 0 && !markAsPositive) || (originalAmount > 0 && markAsPositive)
+                  ? "border-emerald-100 dark:border-emerald-900/30"
+                  : "border-rose-100 dark:border-rose-900/30"
                 }`}>
                 <Checkbox
                   id="applyPositiveGlobally"
                   checked={applyPositiveGlobally}
                   onCheckedChange={(checked) => setApplyPositiveGlobally(checked as boolean)}
-                  className={`rounded-md ${amount < 0
+                  className={`rounded-md ${(originalAmount < 0 && !markAsPositive) || (originalAmount > 0 && markAsPositive)
                       ? "border-emerald-300 dark:border-emerald-700 data-[state=checked]:bg-emerald-600"
                       : "border-rose-300 dark:border-rose-700 data-[state=checked]:bg-rose-600"
                     }`}
                 />
                 <label
                   htmlFor="applyPositiveGlobally"
-                  className={`text-xs font-medium leading-none cursor-pointer ${amount < 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                  className={`text-xs font-medium leading-none cursor-pointer ${(originalAmount < 0 && !markAsPositive) || (originalAmount > 0 && markAsPositive)
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : "text-rose-600 dark:text-rose-400"
                     }`}
                 >
                   Aplicar a todas las transacciones con esta descripción

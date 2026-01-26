@@ -6,6 +6,7 @@ const RULES_BASE_DIR = path.join(process.cwd(), 'custom-data', 'rules');
 export interface RuleEntry {
   isIgnored?: boolean;
   isPositive?: boolean;
+  isEdited?: boolean;
   lastUpdated: string;
 }
 
@@ -23,7 +24,7 @@ export interface CategoryRule {
 
 export class RuleService {
   private static IGNORE_RULES_PATH = path.join(RULES_BASE_DIR, 'ignore-rules.json');
-  private static POSITIVE_RULES_PATH = path.join(RULES_BASE_DIR, 'positive-rules.json');
+  private static FLIP_RULES_PATH = path.join(RULES_BASE_DIR, 'flip-rules.json');
   private static CATEGORY_RULES_PATH = path.join(RULES_BASE_DIR, 'category-rules.json');
 
   private static DEFAULT_COLLECTION: RuleCollection = { byDescription: {}, byId: {} };
@@ -66,33 +67,34 @@ export class RuleService {
     );
   }
 
-  // --- Positive Rules ---
-  static async getPositiveRules(): Promise<RuleCollection> {
-    return JsonStorageService.read<RuleCollection>(this.POSITIVE_RULES_PATH, this.DEFAULT_COLLECTION);
+  // --- Flip Rules ---
+  static async getFlipRules(): Promise<RuleCollection> {
+    return JsonStorageService.read<RuleCollection>(this.FLIP_RULES_PATH, this.DEFAULT_COLLECTION);
   }
 
-  static async updatePositiveRule(params: {
+  static async updateFlipRule(params: {
     description?: string;
     transactionId?: string;
     isPositive: boolean;
+    isEdited?: boolean;
     applyGlobally?: boolean;
   }) {
-    const { description, transactionId, isPositive, applyGlobally } = params;
+    const { description, transactionId, isPositive, isEdited, applyGlobally } = params;
     const timestamp = new Date().toISOString();
 
     return JsonStorageService.update<RuleCollection>(
-      this.POSITIVE_RULES_PATH,
+      this.FLIP_RULES_PATH,
       (rules) => {
         if (applyGlobally && description) {
           if (isPositive) {
-            rules.byDescription[description] = { isPositive: true, lastUpdated: timestamp };
+            rules.byDescription[description] = { isPositive: true, isEdited, lastUpdated: timestamp };
             if (transactionId) delete rules.byId[transactionId];
           } else {
             delete rules.byDescription[description];
           }
         } else if (transactionId) {
           if (isPositive) {
-            rules.byId[transactionId] = { isPositive: true, lastUpdated: timestamp };
+            rules.byId[transactionId] = { isPositive: true, isEdited, lastUpdated: timestamp };
             if (description) delete rules.byDescription[description];
           } else {
             delete rules.byId[transactionId];

@@ -114,13 +114,14 @@ export function TransactionList({
 
     // Update positive rules if markAsPositive is defined
     if (data.markAsPositive !== undefined) {
-      await fetch("/api/positive-rules", {
+      await fetch("/api/flip-rules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           description: data.originalDescription || data.description,
           transactionId: data.transactionId,
           isPositive: data.markAsPositive,
+          isEdited: true,
           applyGlobally: data.applyPositiveGlobally
         }),
       });

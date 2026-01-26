@@ -20,13 +20,13 @@ export default function Home() {
   };
 
   const rulesPath = path.join(process.cwd(), "custom-data/rules/category-rules.json");
-  const positiveRulesPath = path.join(process.cwd(), "custom-data/rules/positive-rules.json");
+  const flipRulesPath = path.join(process.cwd(), "custom-data/rules/flip-rules.json");
   const categoriesPath = path.join(process.cwd(), "constants/categories.json");
   const customCategoriesPath = path.join(process.cwd(), "custom-data/categories/custom-categories.json");
   const ignoreRulesPath = path.join(process.cwd(), "custom-data/rules/ignore-rules.json");
 
   let categoryRules: Record<string, any> = {};
-  let positiveRules: { byDescription: Record<string, any>; byId: Record<string, any> } = { byDescription: {}, byId: {} };
+  let flipRules: { byDescription: Record<string, any>; byId: Record<string, any> } = { byDescription: {}, byId: {} };
   let ignoreRules: { byDescription: Record<string, any>; byId: Record<string, any> } = { byDescription: {}, byId: {} };
   let categories: any[] = [];
 
@@ -34,9 +34,9 @@ export default function Home() {
     categoryRules = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
   }
 
-  // Load positive rules
-  if (fs.existsSync(positiveRulesPath)) {
-    positiveRules = JSON.parse(fs.readFileSync(positiveRulesPath, 'utf8'));
+  // Load flip rules
+  if (fs.existsSync(flipRulesPath)) {
+    flipRules = JSON.parse(fs.readFileSync(flipRulesPath, 'utf8'));
   }
 
   // Load ignore rules
@@ -85,20 +85,18 @@ export default function Home() {
           // Generate transaction ID for positive rule lookup
           const txId = tx.id || `${tx.fecha}-${tx.descripcion}-${tx.valor}-${index}`;
 
-          // Check positive rules (by description or by ID)
+          // Check flip rules (by description or by ID)
           let isMarkedPositive = false;
           let isPositiveGlobal = false;
-          let valor = tx.valor;
-
-          // Check if there's a positive rule by description (partial match)
-          const descriptionRule = Object.keys(positiveRules.byDescription).find(
+          // Check if there's a flip rule by description (partial match)
+          const descriptionRule = Object.keys(flipRules.byDescription).find(
             key => originalDescription.includes(key)
           );
 
-          if (descriptionRule && positiveRules.byDescription[descriptionRule]?.isPositive) {
+          if (descriptionRule && flipRules.byDescription[descriptionRule]?.isPositive) {
             isMarkedPositive = true;
             isPositiveGlobal = true;
-          } else if (positiveRules.byId[txId]?.isPositive) {
+          } else if (flipRules.byId[txId]?.isPositive) {
             isMarkedPositive = true;
             isPositiveGlobal = false;
           }
@@ -119,6 +117,9 @@ export default function Home() {
             isIgnoredGlobal = false;
           }
 
+          const originalValor = tx.valor;
+          let valor = tx.valor;
+
           // If marked as positive, flip the sign (income becomes expense, expense becomes income)
           if (isMarkedPositive) {
             valor = -valor;
@@ -134,6 +135,7 @@ export default function Home() {
             categoryId,
             categoryName,
             valor,
+            originalValor,
             isMarkedPositive,
             isPositiveGlobal,
             isMarkedIgnored,
