@@ -17,6 +17,8 @@ interface TransactionItemProps {
   transactionId?: string;
   isMarkedPositive?: boolean;
   isPositiveGlobal?: boolean;
+  isIgnored?: boolean;
+  isIgnoredGlobal?: boolean;
   onUpdate: (data: any) => Promise<void>;
 }
 
@@ -34,6 +36,8 @@ export function TransactionItem({
   transactionId,
   isMarkedPositive,
   isPositiveGlobal,
+  isIgnored,
+  isIgnoredGlobal,
   onUpdate
 }: TransactionItemProps) {
   const isIncome = value >= 0;
@@ -94,6 +98,8 @@ export function TransactionItem({
           transactionId={transactionId}
           isMarkedPositive={isMarkedPositive}
           isPositiveGlobal={isPositiveGlobal}
+          isIgnored={isIgnored}
+          isIgnoredGlobal={isIgnoredGlobal}
           onSave={onUpdate}
         />
       </div>

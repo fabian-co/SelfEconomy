@@ -98,16 +98,16 @@ export function TransactionList({
       categorySuccess = res.ok;
     }
 
-    // Update positive rules if markAsPositive is defined
-    if (data.markAsPositive !== undefined) {
-      await fetch("/api/positive-rules", {
+    // Update ignore rules if markAsIgnored is defined
+    if (data.markAsIgnored !== undefined) {
+      await fetch("/api/ignore-rules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           description: data.originalDescription || data.description,
           transactionId: data.transactionId,
-          isPositive: data.markAsPositive,
-          applyGlobally: data.applyPositiveGlobally
+          isIgnored: data.markAsIgnored,
+          applyGlobally: data.applyIgnoreGlobally
         }),
       });
     }
@@ -234,6 +234,8 @@ export function TransactionList({
                     transactionId={tx.id || `${tx.fecha}-${tx.descripcion}-${tx.valor}-${index}`}
                     isMarkedPositive={tx.isMarkedPositive}
                     isPositiveGlobal={tx.isPositiveGlobal}
+                    isIgnored={tx.isMarkedIgnored}
+                    isIgnoredGlobal={tx.isIgnoredGlobal}
                     onUpdate={handleUpdateTransaction}
                   />
                 ))}

@@ -27,6 +27,8 @@ interface TransactionEditorProps {
   transactionId?: string;
   isMarkedPositive?: boolean;
   isPositiveGlobal?: boolean;
+  isIgnored?: boolean;
+  isIgnoredGlobal?: boolean;
   onSave: (data: {
     originalDescription: string,
     description: string,
@@ -35,12 +37,26 @@ interface TransactionEditorProps {
     applyGlobally: boolean,
     markAsPositive?: boolean,
     applyPositiveGlobally?: boolean,
+    markAsIgnored?: boolean,
+    applyIgnoreGlobally?: boolean,
     transactionId?: string
   }) => Promise<void>;
   trigger?: React.ReactNode;
 }
 
-export function TransactionEditor({ description, originalDescription, categoryId, categoryName, transactionId, isMarkedPositive, isPositiveGlobal, onSave, trigger }: TransactionEditorProps) {
+export function TransactionEditor({
+  description,
+  originalDescription,
+  categoryId,
+  categoryName,
+  transactionId,
+  isMarkedPositive,
+  isPositiveGlobal,
+  isIgnored,
+  isIgnoredGlobal,
+  onSave,
+  trigger
+}: TransactionEditorProps) {
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editDescription, setEditDescription] = useState(description);
@@ -48,6 +64,8 @@ export function TransactionEditor({ description, originalDescription, categoryId
   const [applyGlobally, setApplyGlobally] = useState(true);
   const [markAsPositive, setMarkAsPositive] = useState(isMarkedPositive || false);
   const [applyPositiveGlobally, setApplyPositiveGlobally] = useState(isPositiveGlobal !== undefined ? isPositiveGlobal : true);
+  const [markAsIgnored, setMarkAsIgnored] = useState(isIgnored || false);
+  const [applyIgnoreGlobally, setApplyIgnoreGlobally] = useState(isIgnoredGlobal !== undefined ? isIgnoredGlobal : true);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newName, setNewName] = useState("");
@@ -64,8 +82,10 @@ export function TransactionEditor({ description, originalDescription, categoryId
       setSelectedCategoryId(categoryId || "");
       setMarkAsPositive(isMarkedPositive || false);
       setApplyPositiveGlobally(isPositiveGlobal !== undefined ? isPositiveGlobal : true);
+      setMarkAsIgnored(isIgnored || false);
+      setApplyIgnoreGlobally(isIgnoredGlobal !== undefined ? isIgnoredGlobal : true);
     }
-  }, [open, description, categoryId, isMarkedPositive, isPositiveGlobal]);
+  }, [open, description, categoryId, isMarkedPositive, isPositiveGlobal, isIgnored, isIgnoredGlobal]);
 
   useEffect(() => {
     if (open) {
@@ -128,6 +148,8 @@ export function TransactionEditor({ description, originalDescription, categoryId
         applyGlobally,
         markAsPositive,
         applyPositiveGlobally,
+        markAsIgnored,
+        applyIgnoreGlobally,
         transactionId
       });
 
@@ -331,6 +353,39 @@ export function TransactionEditor({ description, originalDescription, categoryId
                 <label
                   htmlFor="applyPositiveGlobally"
                   className="text-xs font-medium leading-none cursor-pointer text-emerald-600 dark:text-emerald-400"
+                >
+                  Aplicar a todas las transacciones con esta descripción
+                </label>
+              </div>
+            )}
+          </div>
+
+          {/* Mark as Ignored Section */}
+          <div className="space-y-3 bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-xl border border-zinc-100 dark:border-zinc-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <X className="h-4 w-4 text-zinc-500" />
+                <Label htmlFor="markAsIgnored" className="text-sm font-medium text-zinc-700 dark:text-zinc-400 cursor-pointer">
+                  Ignorar transaccion
+                </Label>
+              </div>
+              <Switch
+                id="markAsIgnored"
+                checked={markAsIgnored}
+                onCheckedChange={setMarkAsIgnored}
+              />
+            </div>
+            {markAsIgnored && (
+              <div className="flex items-center space-x-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                <Checkbox
+                  id="applyIgnoreGlobally"
+                  checked={applyIgnoreGlobally}
+                  onCheckedChange={(checked) => setApplyIgnoreGlobally(checked as boolean)}
+                  className="rounded-md border-zinc-300 dark:border-zinc-700"
+                />
+                <label
+                  htmlFor="applyIgnoreGlobally"
+                  className="text-xs font-medium leading-none cursor-pointer text-zinc-600 dark:text-zinc-400"
                 >
                   Aplicar a todas las transacciones con esta descripción
                 </label>

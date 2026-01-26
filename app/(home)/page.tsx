@@ -23,9 +23,11 @@ export default function Home() {
   const positiveRulesPath = path.join(process.cwd(), "custom-data/rules/positive-rules.json");
   const categoriesPath = path.join(process.cwd(), "constants/categories.json");
   const customCategoriesPath = path.join(process.cwd(), "custom-data/categories/custom-categories.json");
+  const ignoreRulesPath = path.join(process.cwd(), "custom-data/rules/ignore-rules.json");
 
   let categoryRules: Record<string, any> = {};
   let positiveRules: { byDescription: Record<string, any>; byId: Record<string, any> } = { byDescription: {}, byId: {} };
+  let ignoreRules: { byDescription: Record<string, any>; byId: Record<string, any> } = { byDescription: {}, byId: {} };
   let categories: any[] = [];
 
   if (fs.existsSync(rulesPath)) {
@@ -35,6 +37,11 @@ export default function Home() {
   // Load positive rules
   if (fs.existsSync(positiveRulesPath)) {
     positiveRules = JSON.parse(fs.readFileSync(positiveRulesPath, 'utf8'));
+  }
+
+  // Load ignore rules
+  if (fs.existsSync(ignoreRulesPath)) {
+    ignoreRules = JSON.parse(fs.readFileSync(ignoreRulesPath, 'utf8'));
   }
 
   // Load default categories
@@ -96,6 +103,22 @@ export default function Home() {
             isPositiveGlobal = false;
           }
 
+          // Check ignore rules (by description or by ID)
+          let isMarkedIgnored = false;
+          let isIgnoredGlobal = false;
+
+          const ignoreDescriptionRule = Object.keys(ignoreRules.byDescription).find(
+            key => originalDescription.includes(key)
+          );
+
+          if (ignoreDescriptionRule && ignoreRules.byDescription[ignoreDescriptionRule]?.isIgnored) {
+            isMarkedIgnored = true;
+            isIgnoredGlobal = true;
+          } else if (ignoreRules.byId[txId]?.isIgnored) {
+            isMarkedIgnored = true;
+            isIgnoredGlobal = false;
+          }
+
           // If marked as positive and value is negative, make it positive
           if (isMarkedPositive && valor < 0) {
             valor = Math.abs(valor);
@@ -112,7 +135,10 @@ export default function Home() {
             categoryName,
             valor,
             isMarkedPositive,
-            isPositiveGlobal
+            isPositiveGlobal,
+            isMarkedIgnored,
+            isIgnoredGlobal,
+            ignored: isMarkedIgnored || tx.ignored
           };
         });
 
