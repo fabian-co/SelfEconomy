@@ -90,15 +90,17 @@ INPUT DEL SISTEMA:
 - Longitud muestra: ${text.length} caracteres
 
 PRINCIPIOS CRÍTICOS DE DISEÑO (NO LOS ROMPAS):
-1. **ANCLAJE:** No uses regex débiles como '.*'. Usa anclas. Ejemplo: Si el monto siempre tiene '$', usa '\\$' en el regex.
-2. **DESCRIPCIONES:** Las descripciones de compras CONTIENEN NÚMEROS (ej: "Uber 360", "Calle 13"). 
+1. **COLUMNAS:** Solo nos interesan 3 datos: **fecha**, **descripcion** y **valor**.
+   - 🚨 **IMPORTANTE:** Si existe una columna llamada "saldo" (o balance/acumulado), debés **IGNORARLA COMPLETAMENTE**. No la incluyas en ningún grupo de captura ni en el regex.
+2. **ANCLAJE:** No uses regex débiles como '.*'. Usa anclas. Ejemplo: Si el monto siempre tiene '$', usa '\\$' en el regex.
+3. **DESCRIPCIONES:** Las descripciones de compras CONTIENEN NÚMEROS (ej: "Uber 360", "Calle 13"). 
    - 🚫 PROHIBIDO USAR: '[^\\d]+' (esto rompe la descripción al primer número).
    - ✅ MEJOR USAR: '((?:(?!\\$).)+?)' (Lookahead: toma todo hasta ver el signo de moneda) o '(.*?)' (Non-greedy).
-3. **ESPACIOS:** Usa siempre '\\s+' en lugar de un espacio simple ' ', ya que los PDFs a veces tienen espacios múltiples invisibles.
-4. **FECHAS:** Si la fecha está al principio de la línea, usa la estructura exacta (ej: '\\d{2}\\s[A-Z]{3}').
+4. **ESPACIOS:** Usa siempre '\\s+' en lugar de un espacio simple ' ', ya que los PDFs a veces tienen espacios múltiples invisibles.
+5. **FECHAS:** Si la fecha está al principio de la línea, usa la estructura exacta (ej: '\\d{2}\\s[A-Z]{3}').
 
 VALIDACIÓN:
-En el campo 'validation', demuestra que tu regex funciona extrayendo 3 líneas del texto de abajo.
+En el campo 'validation', demuestra que tu regex funciona extrayendo 3 líneas del texto de abajo, asegurándote de capturar solo fecha, descripción y valor, ignorando el saldo.
 `;
 
     // --- INYECCIÓN DE FEEDBACK (Lógica de Iteración) ---
