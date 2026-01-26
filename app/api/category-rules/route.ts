@@ -1,24 +1,9 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-
-const RULES_PATH = path.join(process.cwd(), "custom-data/rules/category-rules.json");
-const RULES_DIR = path.join(process.cwd(), "custom-data/rules");
-
-function getRules() {
-  if (!fs.existsSync(RULES_DIR)) {
-    fs.mkdirSync(RULES_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(RULES_PATH)) {
-    fs.writeFileSync(RULES_PATH, JSON.stringify({}));
-  }
-  const content = fs.readFileSync(RULES_PATH, "utf-8");
-  return JSON.parse(content);
-}
+import { RuleService } from "@/lib/services/rule.service";
 
 export async function GET() {
   try {
-    const rules = getRules();
+    const rules = await RuleService.getCategoryRules();
     return NextResponse.json(rules);
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch rules" }, { status: 500 });
@@ -34,17 +19,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const rules = getRules();
-
-    // Key by the original bank description
-    rules[originalDescription] = {
-      title: description, // The user-friendly name
+    const rules = await RuleService.updateCategoryRule({
+      originalDescription,
+      description,
       categoryId,
-      categoryName,
-      lastUpdated: new Date().toISOString()
-    };
-
-    fs.writeFileSync(RULES_PATH, JSON.stringify(rules, null, 2));
+      categoryName
+    });
 
     return NextResponse.json({ success: true, rules });
   } catch (error) {

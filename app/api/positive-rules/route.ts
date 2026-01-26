@@ -1,31 +1,9 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
-
-const RULES_PATH = path.join(process.cwd(), "custom-data/rules/positive-rules.json");
-const RULES_DIR = path.join(process.cwd(), "custom-data/rules");
-
-interface PositiveRules {
-  byDescription: Record<string, { isPositive: boolean; lastUpdated: string }>;
-  byId: Record<string, { isPositive: boolean; lastUpdated: string }>;
-}
-
-function getRules(): PositiveRules {
-  if (!fs.existsSync(RULES_DIR)) {
-    fs.mkdirSync(RULES_DIR, { recursive: true });
-  }
-  if (!fs.existsSync(RULES_PATH)) {
-    const initial: PositiveRules = { byDescription: {}, byId: {} };
-    fs.writeFileSync(RULES_PATH, JSON.stringify(initial, null, 2));
-    return initial;
-  }
-  const content = fs.readFileSync(RULES_PATH, "utf-8");
-  return JSON.parse(content);
-}
+import { RuleService } from "@/lib/services/rule.service";
 
 export async function GET() {
   try {
-    const rules = getRules();
+    const rules = await RuleService.getPositiveRules();
     return NextResponse.json(rules);
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch positive rules" }, { status: 500 });
@@ -41,34 +19,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing isPositive field" }, { status: 400 });
     }
 
-    const rules = getRules();
-    const timestamp = new Date().toISOString();
-
-    if (applyGlobally && description) {
-      if (isPositive) {
-        rules.byDescription[description] = { isPositive: true, lastUpdated: timestamp };
-        // Cleanup specific ID rule if it exists for this transaction
-        if (transactionId) {
-          delete rules.byId[transactionId];
-        }
-      } else {
-        delete rules.byDescription[description];
-      }
-    } else if (transactionId) {
-      if (isPositive) {
-        rules.byId[transactionId] = { isPositive: true, lastUpdated: timestamp };
-        // Cleanup global rule for this description
-        if (description) {
-          delete rules.byDescription[description];
-        }
-      } else {
-        delete rules.byId[transactionId];
-      }
-    } else {
+    if (!description && !transactionId) {
       return NextResponse.json({ error: "Missing description or transactionId" }, { status: 400 });
     }
 
-    fs.writeFileSync(RULES_PATH, JSON.stringify(rules, null, 2));
+    const rules = await RuleService.updatePositiveRule({
+      description,
+      transactionId,
+      isPositive,
+      applyGlobally
+    });
 
     return NextResponse.json({ success: true, rules });
   } catch (error) {
