@@ -36,7 +36,7 @@ export function TemplateBanner({
           className="flex-[2] py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
         >
           {isAiProcessing ? <Loader2Icon className="h-4 w-4 animate-spin" /> : <CheckIcon className="h-4 w-4" />}
-          Usar Template
+          Procesar con template
         </button>
         <button
           type="button"
@@ -44,7 +44,7 @@ export function TemplateBanner({
           disabled={isAiProcessing}
           className="flex-1 py-3 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 text-xs font-bold rounded-xl border border-zinc-200 dark:border-zinc-800 transition-all"
         >
-          Ignorar y usar IA
+          Analizar con IA
         </button>
       </div>
     </div >

@@ -114,39 +114,42 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
 
       if (useAi) {
         setIsAiProcessing(true);
-        // Generate unique session ID for versioning
-        const newSessionId = `session_${Date.now()}`;
-        setSessionId(newSessionId);
         try {
-          const processRes = await fetch('/api/process', {
+          const extractRes = await fetch('/api/process', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               filePath: uploadResult.path,
               password: values.password,
-              action: 'ai_process_with_template',
-              sessionId: newSessionId
+              action: 'ai_extract'
             }),
             signal: controller.signal
           });
-          const processData = await processRes.json();
+          const extractData = await extractRes.json();
 
-          if (!processRes.ok) {
-            if (processRes.status === 401 || processData.error === 'PASSWORD_REQUIRED') {
+          if (!extractRes.ok) {
+            if (extractRes.status === 401 || extractData.error === 'PASSWORD_REQUIRED') {
               setPasswordError("Este archivo está protegido con contraseña. Por favor ingresa la contraseña para continuar.");
               setIsAiProcessing(false);
               setIsUploading(false);
               return;
             }
-            throw new Error(processData.error || 'Error en procesamiento AI+Template');
+            throw new Error(extractData.error || 'Error al extraer texto');
           }
 
-          setAiData(processData);
-          if (processData.version) setCurrentVersion(processData.version);
-          if (processData.meta_info?.banco) setValue("bank", processData.meta_info.banco);
-          if (processData.meta_info?.tipo_cuenta) setValue("accountType", processData.meta_info.tipo_cuenta);
+          setExtractedText(extractData.text);
 
-          setStep('ai_preview');
+          if (extractData.matchedTemplate) {
+            setDetectedTemplate(extractData.matchedTemplate);
+            setIsAiProcessing(false);
+            setIsUploading(false);
+            return;
+          }
+
+          // No match found, proceed to normal AI normalization
+          const newSessionId = `session_${Date.now()}`;
+          setSessionId(newSessionId);
+          await performAiNormalization(extractData.text, values.bank || "", values.accountType || "", controller.signal);
         } finally {
           setIsAiProcessing(false);
         }
