@@ -14,6 +14,8 @@ interface AIPreviewStepProps extends SharedStepProps {
   onBack: () => void;
   onConfirm: () => void;
   onFeedback: (message: string) => Promise<void>;
+  onUpdateTransaction: (data: any) => void;
+  pendingRules: any[];
   isChatLoading: boolean;
 }
 
@@ -24,6 +26,8 @@ export function AIPreviewStep({
   onBack,
   onConfirm,
   onFeedback,
+  onUpdateTransaction,
+  pendingRules,
   isChatLoading
 }: AIPreviewStepProps) {
   const { setValue, watch } = form;
@@ -62,7 +66,7 @@ export function AIPreviewStep({
             </div>
           </div>
 
-          <IATablePreview data={aiData} />
+          <IATablePreview data={aiData} onUpdateTransaction={onUpdateTransaction} pendingRules={pendingRules} />
 
           <div className="hidden md:block mt-auto">
             <ActionButtons

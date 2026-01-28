@@ -34,6 +34,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   const [isChatLoading, setIsChatLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentVersion, setCurrentVersion] = useState<number>(1);
+  const [pendingRules, setPendingRules] = useState<any[]>([]);
 
   const form = useForm<UploadFormValues>({
     resolver: zodResolver(uploadSchema),
@@ -264,6 +265,28 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
     }
   };
 
+  const handleTransactionUpdate = (data: any) => {
+    // 1. Add to pending rules to be saved on confirm and used for display
+    setPendingRules(prev => {
+      const existingIndex = prev.findIndex(r => r.description === data.originalDescription);
+      const newRule = {
+        description: data.originalDescription,
+        markAsPositive: data.markAsPositive,
+        applyPositiveGlobally: data.applyPositiveGlobally,
+        markAsIgnored: data.markAsIgnored,
+        applyIgnoreGlobally: data.applyIgnoreGlobally,
+        originalAmount: data.originalAmount
+      };
+
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = { ...updated[existingIndex], ...newRule };
+        return updated;
+      }
+      return [...prev, newRule];
+    });
+  };
+
   const handleAiConfirm = async () => {
     setIsUploading(true);
     try {
@@ -287,7 +310,35 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
 
       if (!res.ok) throw new Error('Error al guardar el resultado de la IA');
 
-      toast.success('IA: Datos normalizados y guardados');
+      // Persist pending rules
+      for (const rule of pendingRules) {
+        if (rule.markAsIgnored !== undefined) {
+          await fetch("/api/ignore-rules", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              description: rule.description,
+              isIgnored: rule.markAsIgnored,
+              applyGlobally: rule.applyIgnoreGlobally
+            }),
+          });
+        }
+
+        if (rule.markAsPositive !== undefined) {
+          await fetch("/api/flip-rules", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              description: rule.description,
+              isPositive: rule.markAsPositive,
+              isEdited: true,
+              applyGlobally: rule.applyPositiveGlobally
+            }),
+          });
+        }
+      }
+
+      toast.success('IA: Datos normalizados y reglas guardadas');
       onUploadSuccess();
       handleClose();
     } catch (error: any) {
@@ -428,6 +479,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             onBack={() => setStep('upload')}
             onConfirm={handleAiConfirm}
             onFeedback={handleAiFeedback}
+            onUpdateTransaction={handleTransactionUpdate}
+            pendingRules={pendingRules}
             isChatLoading={isChatLoading}
           />
         )}

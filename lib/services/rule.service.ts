@@ -47,19 +47,11 @@ export class RuleService {
       this.IGNORE_RULES_PATH,
       (rules) => {
         if (applyGlobally && description) {
-          if (isIgnored) {
-            rules.byDescription[description] = { isIgnored: true, lastUpdated: timestamp };
-            if (transactionId) delete rules.byId[transactionId];
-          } else {
-            delete rules.byDescription[description];
-          }
+          rules.byDescription[description] = { isIgnored, lastUpdated: timestamp };
+          if (transactionId) delete rules.byId[transactionId];
         } else if (transactionId) {
-          if (isIgnored) {
-            rules.byId[transactionId] = { isIgnored: true, lastUpdated: timestamp };
-            if (description) delete rules.byDescription[description];
-          } else {
-            delete rules.byId[transactionId];
-          }
+          rules.byId[transactionId] = { isIgnored, lastUpdated: timestamp };
+          if (description) delete rules.byDescription[description];
         }
         return rules;
       },
@@ -86,19 +78,11 @@ export class RuleService {
       this.FLIP_RULES_PATH,
       (rules) => {
         if (applyGlobally && description) {
-          if (isPositive) {
-            rules.byDescription[description] = { isPositive: true, isEdited, lastUpdated: timestamp };
-            if (transactionId) delete rules.byId[transactionId];
-          } else {
-            delete rules.byDescription[description];
-          }
+          rules.byDescription[description] = { isPositive, isEdited, lastUpdated: timestamp };
+          if (transactionId) delete rules.byId[transactionId];
         } else if (transactionId) {
-          if (isPositive) {
-            rules.byId[transactionId] = { isPositive: true, isEdited, lastUpdated: timestamp };
-            if (description) delete rules.byDescription[description];
-          } else {
-            delete rules.byId[transactionId];
-          }
+          rules.byId[transactionId] = { isPositive, isEdited, lastUpdated: timestamp };
+          if (description) delete rules.byDescription[description];
         }
         return rules;
       },

@@ -93,11 +93,15 @@ export default function Home() {
             key => originalDescription.includes(key)
           );
 
-          if (descriptionRule && flipRules.byDescription[descriptionRule]?.isPositive) {
-            isMarkedPositive = true;
+          if (descriptionRule) {
+            isMarkedPositive = flipRules.byDescription[descriptionRule].isPositive === true;
             isPositiveGlobal = true;
-          } else if (flipRules.byId[txId]?.isPositive) {
-            isMarkedPositive = true;
+          } else if (flipRules.byId[txId]) {
+            isMarkedPositive = flipRules.byId[txId].isPositive === true;
+            isPositiveGlobal = false;
+          } else {
+            // Fallback to what was in the AI processed data if no rule exists
+            isMarkedPositive = tx.isMarkedPositive || false;
             isPositiveGlobal = false;
           }
 
@@ -109,11 +113,14 @@ export default function Home() {
             key => originalDescription.includes(key)
           );
 
-          if (ignoreDescriptionRule && ignoreRules.byDescription[ignoreDescriptionRule]?.isIgnored) {
-            isMarkedIgnored = true;
+          if (ignoreDescriptionRule) {
+            isMarkedIgnored = ignoreRules.byDescription[ignoreDescriptionRule].isIgnored === true;
             isIgnoredGlobal = true;
-          } else if (ignoreRules.byId[txId]?.isIgnored) {
-            isMarkedIgnored = true;
+          } else if (ignoreRules.byId[txId]) {
+            isMarkedIgnored = ignoreRules.byId[txId].isIgnored === true;
+            isIgnoredGlobal = false;
+          } else {
+            isMarkedIgnored = tx.isMarkedIgnored || false;
             isIgnoredGlobal = false;
           }
 
@@ -121,8 +128,12 @@ export default function Home() {
           let valor = tx.valor;
 
           // If marked as positive, flip the sign (income becomes expense, expense becomes income)
+          // If rule is marked positive, ensure sign is positive. Otherwise ensure it's negative (standard behavior for bank data unless specified)
+          // Actually, we use originalValor as baseline to avoid repeated flips.
           if (isMarkedPositive) {
-            valor = -valor;
+            valor = Math.abs(originalValor);
+          } else {
+            valor = -Math.abs(originalValor);
           }
 
           return {
@@ -140,7 +151,7 @@ export default function Home() {
             isPositiveGlobal,
             isMarkedIgnored,
             isIgnoredGlobal,
-            ignored: isMarkedIgnored || tx.ignored
+            ignored: isMarkedIgnored
           };
         });
 
