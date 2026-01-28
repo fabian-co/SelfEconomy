@@ -27,6 +27,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: 'Carpetas temp limpiadas' });
     }
 
+    if (action === 'delete_template') {
+      const { templateFileName } = body;
+      await TemplateService.deleteTemplate(templateFileName);
+      return NextResponse.json({ success: true, message: 'Template eliminado' });
+    }
+
+    if (action === 'rename_template') {
+      const { templateFileName, newEntityName } = body;
+      const newFileName = await TemplateService.renameTemplate(templateFileName, newEntityName);
+      return NextResponse.json({ success: true, message: 'Template renombrado', newFileName });
+    }
+
     if (!filePath) {
       return NextResponse.json({ error: 'Missing filePath' }, { status: 400 });
     }

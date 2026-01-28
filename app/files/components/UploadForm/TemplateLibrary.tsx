@@ -1,7 +1,8 @@
-import React from "react";
-import { SearchIcon } from "lucide-react";
+import React, { useState } from "react";
+import { SearchIcon, Edit2, Trash2, Check, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Template } from "./types";
+import { toast } from "sonner";
 
 interface TemplateLibraryProps {
   availableTemplates: Template[];
@@ -18,9 +19,71 @@ export function TemplateLibrary({
   onSelectTemplate,
   fileExtension
 }: TemplateLibraryProps) {
+  const [editingFileName, setEditingFileName] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [isActionLoading, setIsActionLoading] = useState(false);
   const filteredTemplates = fileExtension
     ? availableTemplates.filter(t => !t.file_types || t.file_types.includes(fileExtension))
     : availableTemplates;
+
+  const handleStartEdit = (e: React.MouseEvent, tmp: Template) => {
+    e.stopPropagation();
+    setEditingFileName(tmp.fileName);
+    setEditValue(tmp.entity);
+  };
+
+  const handleCancelEdit = (e: any) => {
+    if (e.stopPropagation) e.stopPropagation();
+    setEditingFileName(null);
+  };
+
+  const handleRename = async (e: React.MouseEvent, fileName: string) => {
+    e.stopPropagation();
+    if (!editValue.trim()) return;
+    setIsActionLoading(true);
+    try {
+      const res = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'rename_template',
+          templateFileName: fileName,
+          newEntityName: editValue.trim()
+        }),
+      });
+      if (!res.ok) throw new Error("Error al renombrar");
+      toast.success("Template renombrado");
+      setEditingFileName(null);
+      onFetchTemplates();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, fileName: string) => {
+    e.stopPropagation();
+    if (!window.confirm("¿Seguro que quieres eliminar este template?")) return;
+    setIsActionLoading(true);
+    try {
+      const res = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete_template',
+          templateFileName: fileName
+        }),
+      });
+      if (!res.ok) throw new Error("Error al eliminar");
+      toast.success("Template eliminado");
+      onFetchTemplates();
+    } catch (error: any) {
+      toast.error(error.message);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
 
   return (
     <div className="mt-2">
@@ -37,16 +100,36 @@ export function TemplateLibrary({
       </button>
 
       {filteredTemplates.length > 0 && (
-        <div className="mt-2 grid gap-2 border border-zinc-100 dark:border-zinc-800 rounded-xl p-2 bg-zinc-50/50 dark:bg-zinc-900/30 max-h-[120px] overflow-y-auto scrollbar-thin">
+        <div className="mt-2 grid gap-2 border border-zinc-100 dark:border-zinc-800 rounded-xl p-2 bg-zinc-50/50 dark:bg-zinc-900/30 max-h-[220px] overflow-y-auto scrollbar-thin">
           {filteredTemplates.map((tmp, i) => (
-            <button
+            <div
               key={i}
-              onClick={() => onSelectTemplate(tmp)}
-              className="text-left p-2 rounded-lg hover:bg-white dark:hover:bg-zinc-950 transition-all border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 group"
+              onClick={() => !editingFileName && onSelectTemplate(tmp)}
+              className={`relative text-left p-2 rounded-lg transition-all border group ${editingFileName === tmp.fileName
+                  ? "bg-white dark:bg-zinc-950 border-emerald-500/50"
+                  : "hover:bg-white dark:hover:bg-zinc-950 border-transparent hover:border-zinc-200 dark:hover:border-zinc-800 cursor-pointer"
+                }`}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex flex-col">
-                  <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">{tmp.entity}</span>
+              <div className="flex items-start justify-between">
+                <div className="flex flex-col flex-1 truncate">
+                  {editingFileName === tmp.fileName ? (
+                    <div className="flex items-center gap-1 pr-8">
+                      <input
+                        autoFocus
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="text-xs font-bold bg-zinc-100 dark:bg-zinc-900 border-none rounded px-1 outline-none w-full"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleRename(e as any, tmp.fileName);
+                          if (e.key === 'Escape') handleCancelEdit(e);
+                        }}
+                      />
+                      <button onClick={(e) => handleRename(e, tmp.fileName)} className="text-emerald-500"><Check className="h-3 w-3" /></button>
+                      <button onClick={handleCancelEdit} className="text-zinc-400"><X className="h-3 w-3" /></button>
+                    </div>
+                  ) : (
+                    <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 truncate pr-8">{tmp.entity}</span>
+                  )}
                   <div className="flex gap-1 mt-0.5">
                     {tmp.file_types?.map(type => (
                       <span key={type} className="text-[8px] uppercase font-bold text-emerald-600 dark:text-emerald-400">
@@ -55,10 +138,30 @@ export function TemplateLibrary({
                     )) || <span className="text-[8px] text-zinc-400">Desconocido</span>}
                   </div>
                 </div>
-                <Badge variant="outline" className="text-[8px] h-4 px-1">{tmp.account_type}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-[8px] h-4 px-1 shrink-0">{tmp.account_type}</Badge>
+                </div>
               </div>
-              <p className="text-[10px] text-zinc-500 truncate">{tmp.transaction_regex}</p>
-            </button>
+              <p className="text-[10px] text-zinc-500 truncate mt-1">{tmp.transaction_regex}</p>
+
+              {/* Action Buttons */}
+              {!editingFileName && (
+                <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={(e) => handleStartEdit(e, tmp)}
+                    className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded text-zinc-400 hover:text-emerald-500 transition-colors"
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </button>
+                  <button
+                    onClick={(e) => handleDelete(e, tmp.fileName)}
+                    className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded text-zinc-400 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}

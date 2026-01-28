@@ -128,6 +128,46 @@ export class TemplateService {
     return { template: JSON.parse(content), version: maxVersion, path: fullPath };
   }
 
+  static async deleteTemplate(fileName: string) {
+    const dir = getTemplatesDir();
+    const templatePath = path.join(dir, fileName);
+    if (fs.existsSync(templatePath)) {
+      await fs.promises.unlink(templatePath);
+    }
+  }
+
+  static async renameTemplate(fileName: string, newEntityName: string) {
+    const dir = getTemplatesDir();
+    const oldPath = path.join(dir, fileName);
+    if (!fs.existsSync(oldPath)) throw new Error('Template original no encontrado');
+
+    const content = await fs.promises.readFile(oldPath, 'utf-8');
+    const template = JSON.parse(content);
+
+    // Actualizar nombre de la entidad
+    template.entity = newEntityName;
+
+    // Generar nuevo nombre de archivo basado en el nuevo nombre
+    const entityKey = newEntityName.toLowerCase().replace(/\s+/g, '_');
+    const accKey = template.account_type.toLowerCase();
+    const fileType = template.file_types?.[0] || 'generic';
+    const newFileName = `${entityKey}_${accKey}_${fileType}.json`;
+    const newPath = path.join(dir, newFileName);
+
+    // Guardar el nuevo (con el nuevo nombre interno)
+    await fs.promises.writeFile(newPath, JSON.stringify({
+      ...template,
+      fileName: newFileName
+    }, null, 2));
+
+    // Si el nombre de archivo cambió (no solo el contenido), borrar el viejo
+    if (newFileName !== fileName) {
+      await fs.promises.unlink(oldPath);
+    }
+
+    return newFileName;
+  }
+
   static async matchExistingTemplate(normalizedContent: string, fileExt: string) {
     const dir = getTemplatesDir();
     if (!fs.existsSync(dir)) return null;
