@@ -17,7 +17,7 @@ interface AIChatProps {
 export function AIChat({ onSendMessage, isLoading }: AIChatProps) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'ai', content: '¿Hay algo que deba corregir? Puedo ajustar el regex, invertir signos o ignorar líneas específicas.' }
+    { role: 'ai', content: '¿Hay algo que deba corregir? Puedo invertir signos o ignorar líneas específicas.' }
   ]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -49,7 +49,7 @@ export function AIChat({ onSendMessage, isLoading }: AIChatProps) {
         <span className="text-xs font-bold uppercase tracking-wider text-zinc-500">Asistente IA</span>
       </div>
 
-      <ScrollArea className="flex-1 max-h-[300px] p-4" ref={scrollRef}>
+      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="flex flex-col gap-3">
           {messages.map((msg, i) => (
             <div

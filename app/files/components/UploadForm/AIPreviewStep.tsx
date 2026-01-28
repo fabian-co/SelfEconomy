@@ -75,7 +75,7 @@ export function AIPreviewStep({
         </div>
 
         {/* Right Column: AI Chat */}
-        <div className="w-full md:w-[280px] shrink-0 h-[450px] md:h-auto">
+        <div className="w-full md:w-[280px] shrink-0 h-[450px] md:h-full">
           <AIChat onSendMessage={onFeedback} isLoading={isChatLoading} />
         </div>
       </div>
