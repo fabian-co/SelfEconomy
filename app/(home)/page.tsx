@@ -160,16 +160,6 @@ export default function Home() {
         // Aggregate totals
         metaInfo.resumen.saldo_actual += data.meta_info?.resumen?.saldo_actual || 0;
 
-        // Treat credit card "abonos" (payments to the card) differently
-        if (accountType === 'credit') {
-          // For credit cards, 'abonos' are payments TO the card, not income.
-          // We don't add them to the global income summary as requested.
-        } else {
-          metaInfo.resumen.total_abonos += data.meta_info?.resumen?.total_abonos || 0;
-        }
-
-        metaInfo.resumen.total_cargos += data.meta_info?.resumen?.total_cargos || 0;
-
         // Use earliest date as "desde"
         if (data.meta_info?.cuenta?.desde < metaInfo.cuenta.desde) {
           metaInfo.cuenta.desde = data.meta_info.cuenta.desde;
@@ -184,9 +174,31 @@ export default function Home() {
       }
     });
 
-    // Sort all transactions by date (assuming DD/MM format and a year from context)
-    // Actually, FinancialDashboard already does grouping and sorting.
-    // We just need to pass the combined list.
+    // Recalculate global totals based on processed transactions
+    // This ensures rules (sign-flip, ignored) are reflected in the totals
+    metaInfo.resumen.total_abonos = 0;
+    metaInfo.resumen.total_cargos = 0;
+
+    allTransactions.forEach(tx => {
+      // Adjust balance based on changes or ignores
+      const delta = (tx.ignored ? 0 : tx.valor) - tx.originalValor;
+      metaInfo.resumen.saldo_actual += delta;
+
+      if (!tx.ignored) {
+        const isCredit = tx.tipo_cuenta === 'credit';
+        if (isCredit) {
+          if (tx.valor < 0) {
+            metaInfo.resumen.total_cargos += Math.abs(tx.valor);
+          }
+        } else {
+          if (tx.valor > 0) {
+            metaInfo.resumen.total_abonos += tx.valor;
+          } else {
+            metaInfo.resumen.total_cargos += Math.abs(tx.valor);
+          }
+        }
+      }
+    });
   }
 
   return (
