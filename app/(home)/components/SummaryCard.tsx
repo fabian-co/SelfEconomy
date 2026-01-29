@@ -13,23 +13,26 @@ interface SummaryCardProps {
 export function SummaryCard({ metaInfo, currentGroup }: SummaryCardProps) {
   return (
     <div id="summary-card-container" className="p-6 rounded-3xl bg-zinc-900 text-white shadow-xl dark:bg-zinc-800 dark:border dark:border-zinc-700">
-      <div className="flex items-start justify-between mb-8">
-        <div id="summary-card-balance">
-          <p className="text-zinc-400 text-sm font-medium mb-1">Saldo Actual</p>
-          <h1 className="text-4xl font-bold tracking-tight">{formatCurrency(metaInfo.resumen.saldo_actual)}</h1>
-        </div>
+      {/* Header with App Branding and Navigation */}
+      <div className="flex items-center justify-between mb-10">
         <div className="flex items-center gap-3">
-          <Link
-            href="/files"
-            className="p-3 bg-zinc-800 rounded-2xl dark:bg-zinc-950/50 hover:bg-zinc-700 dark:hover:bg-zinc-900 transition-colors group"
-            title="Manage Files"
-          >
-            <FolderIcon className="h-6 w-6 text-zinc-400 group-hover:text-white transition-colors" />
-          </Link>
-          <div className="p-3 bg-zinc-800 rounded-2xl dark:bg-zinc-950/50">
+          <div className="p-2.5 bg-emerald-500/10 rounded-2xl">
             <WalletIcon className="h-6 w-6 text-emerald-400" />
           </div>
+          <span className="text-xl font-bold tracking-tight">SelfEconomy</span>
         </div>
+        <Link
+          href="/files"
+          className="p-2.5 bg-zinc-800/50 rounded-2xl hover:bg-zinc-700 transition-colors group border border-zinc-700/30"
+          title="Manage Files"
+        >
+          <FolderIcon className="h-6 w-6 text-zinc-400 group-hover:text-white transition-colors" />
+        </Link>
+      </div>
+
+      <div id="summary-card-balance" className="mb-8">
+        <p className="text-zinc-400 text-sm font-medium mb-1">Saldo Actual</p>
+        <h1 className="text-5xl font-bold tracking-tight">{formatCurrency(metaInfo.resumen.saldo_actual)}</h1>
       </div>
 
       {/* Global Totals */}
