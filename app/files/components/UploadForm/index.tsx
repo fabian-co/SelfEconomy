@@ -150,7 +150,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
           // No match found, proceed to normal AI normalization
           const newSessionId = `session_${Date.now()}`;
           setSessionId(newSessionId);
-          await performAiNormalization(extractData.text, values.bank || "", values.accountType || "", controller.signal);
+          await performAiNormalization(extractData.text, values.bank || "", values.accountType || "", newSessionId, uploadResult.path, values.extractName, controller.signal);
         } finally {
           setIsAiProcessing(false);
         }
@@ -188,13 +188,20 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
     }
   };
 
-  const performAiNormalization = async (text: string, bank: string, accountType: string, signal?: AbortSignal) => {
+  const performAiNormalization = async (text: string, bank: string, accountType: string, sId?: string, fPath?: string, oName?: string, signal?: AbortSignal) => {
     setIsAiProcessing(true);
     try {
       const aiRes = await fetch('/api/ai/normalize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, bank, accountType }),
+        body: JSON.stringify({
+          text,
+          bank,
+          accountType,
+          sessionId: sId || sessionId,
+          filePath: fPath || uploadedFilePath,
+          outputName: oName || watch("extractName")
+        }),
         signal
       });
       const aiNormalizedData = await aiRes.json();
@@ -236,7 +243,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
           bank: detectedTemplate.entity,
           accountType: detectedTemplate.account_type,
           templateFileName: detectedTemplate.fileName,
-          action: 'use_template'
+          action: 'use_template',
+          sessionId
         }),
       });
       const data = await res.json();
@@ -259,7 +267,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
     setDetectedTemplate(null);
     setIsUploading(true);
     try {
-      await performAiNormalization(text, watch("bank") || "", watch("accountType") || "");
+      await performAiNormalization(text, watch("bank") || "", watch("accountType") || "", sessionId || undefined);
     } finally {
       setIsUploading(false);
     }

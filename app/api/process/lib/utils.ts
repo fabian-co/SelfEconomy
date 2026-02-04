@@ -11,9 +11,14 @@ export const getSourcePath = (filePath: string) => {
 
 export const getPythonPath = () => path.join(process.cwd(), 'venv', 'Scripts', 'python.exe');
 export const getScriptPath = (name: string) => path.join(process.cwd(), 'app', 'api', 'py', name);
+export const getRootDirTemp = () => path.join(process.cwd(), 'temp');
+export const getRootDirTempTxt = () => path.join(getRootDirTemp(), 'txt');
+export const getRootDirTempTemplates = () => path.join(getRootDirTemp(), 'templates');
+export const getRootDirTempProcessed = () => path.join(getRootDirTemp(), 'processed');
+
 export const getTemplatesDir = () => path.join(process.cwd(), 'custom-data', 'templates');
-export const getTempTemplatesDir = () => path.join(getTemplatesDir(), 'temp');
+export const getTempTemplatesDir = () => getRootDirTempTemplates();
 export const getProcessedDir = () => path.join(process.cwd(), 'app', 'api', 'extracto', 'processed');
-export const getTempProcessedDir = () => path.join(getProcessedDir(), 'temp');
-export const getTempPreprocessedDir = () => path.join(process.cwd(), 'app', 'api', 'extracto', 'temp', 'preprocessed');
-export const getTempDir = () => path.join(process.cwd(), 'app', 'api', 'extracto', 'temp');
+export const getTempProcessedDir = () => getRootDirTempProcessed();
+export const getTempPreprocessedDir = () => path.join(getRootDirTemp(), 'preprocessed');
+export const getTempDir = () => getRootDirTempTxt();

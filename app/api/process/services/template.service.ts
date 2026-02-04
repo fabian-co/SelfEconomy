@@ -76,6 +76,7 @@ export class TemplateService {
     const version = await this.getNextTempTemplateVersion(sessionId);
     const finalFileName = `${baseFileName}_v${version}.json`;
     const tempTemplatePath = path.join(tempDir, finalFileName);
+    await fs.promises.mkdir(tempDir, { recursive: true });
 
     await fs.promises.writeFile(tempTemplatePath, JSON.stringify({ ...template, version }, null, 2));
     return { path: tempTemplatePath, version };

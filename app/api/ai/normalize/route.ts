@@ -2,6 +2,9 @@ import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import path from 'path';
+import { TemplateService } from '../../process/services/template.service';
+import { TransactionService } from '../../process/services/transaction.service';
 
 // Define the schema for the AI output
 const transactionSchema = z.object({
@@ -44,7 +47,7 @@ const transactionSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const { text, bank, accountType } = await req.json();
+    const { text, bank, accountType, sessionId, filePath, outputName } = await req.json();
 
     if (!text) {
       return NextResponse.json({ error: 'No text provided' }, { status: 400 });
@@ -94,6 +97,32 @@ EJEMPLO DE TEMPLATE FUNCIONAL:
 TEXTO DEL EXTRACTO A ANALIZAR:
 ${text}`,
     });
+
+    // --- SAVE INITIAL TEMP FILES (v1) ---
+    let version = 1;
+    let tempTemplatePath = '';
+
+    if (sessionId && object.template_config) {
+      const fileExt = filePath ? path.extname(filePath).toLowerCase().replace('.', '') : 'json';
+
+      // Save versioned template (v1)
+      const versionedResult = await TemplateService.saveTempTemplateVersioned(object.template_config, fileExt, sessionId);
+      tempTemplatePath = versionedResult.path;
+      version = versionedResult.version;
+
+      // Save versioned processed JSON (v1)
+      const finalResult = {
+        ...object,
+        template_config: {
+          ...object.template_config,
+          fileName: path.basename(tempTemplatePath)
+        },
+        version
+      };
+      await TransactionService.saveTempProcessedDataVersioned(finalResult, sessionId, version);
+
+      return NextResponse.json(finalResult);
+    }
 
     return NextResponse.json(object);
 

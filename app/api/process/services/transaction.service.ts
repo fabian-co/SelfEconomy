@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { getProcessedDir, getTempProcessedDir, getTempPreprocessedDir, getTempDir } from '../lib/utils';
+import { getProcessedDir, getTempProcessedDir, getTempPreprocessedDir, getTempDir, getRootDirTemp } from '../lib/utils';
 
 export class TransactionService {
   static async saveProcessedData(data: any, filePath: string, outputName?: string) {
@@ -39,6 +39,7 @@ export class TransactionService {
     await fs.promises.mkdir(tempDir, { recursive: true });
 
     const outputPath = path.join(tempDir, `${sessionId}_v${version}.json`);
+    await fs.promises.mkdir(tempDir, { recursive: true });
     await fs.promises.writeFile(outputPath, JSON.stringify({ ...data, version }, null, 2));
 
     return outputPath;
@@ -75,47 +76,33 @@ export class TransactionService {
   }
 
   static async clearTempProcessedData() {
-    const tempDir = getTempProcessedDir();
-    const preprocessedDir = getTempPreprocessedDir();
+    const rootTempDir = getRootDirTemp();
 
-    // Clear temp processed JSONs
-    if (fs.existsSync(tempDir)) {
-      const files = await fs.promises.readdir(tempDir);
-      for (const f of files) {
-        try {
-          await fs.promises.unlink(path.join(tempDir, f));
-        } catch (e) {
-          console.warn(`Could not delete temp processed file: ${f}`, e);
-        }
-      }
-    }
-
-    // Clear temp preprocessed PDFs
-    if (fs.existsSync(preprocessedDir)) {
-      const files = await fs.promises.readdir(preprocessedDir);
-      for (const f of files) {
-        try {
-          await fs.promises.unlink(path.join(preprocessedDir, f));
-        } catch (e) {
-          console.warn(`Could not delete temp preprocessed file: ${f}`, e);
-        }
-      }
-    }
-
-    // Clear temp extractions (.txt)
-    const tempDirRaw = getTempDir();
-    if (fs.existsSync(tempDirRaw)) {
-      const files = await fs.promises.readdir(tempDirRaw);
-      for (const f of files) {
-        const fullPath = path.join(tempDirRaw, f);
-        if (fs.statSync(fullPath).isFile()) {
-          try {
-            await fs.promises.unlink(fullPath);
-          } catch (e) {
-            console.warn(`Could not delete temp extraction file: ${f}`, e);
+    if (fs.existsSync(rootTempDir)) {
+      const deleteRecursive = async (dirPath: string) => {
+        const files = await fs.promises.readdir(dirPath);
+        for (const f of files) {
+          const fullPath = path.join(dirPath, f);
+          const stats = await fs.promises.stat(fullPath);
+          if (stats.isDirectory()) {
+            await deleteRecursive(fullPath);
+            try {
+              await fs.promises.rmdir(fullPath);
+            } catch (e) {
+              console.warn(`Could not delete temp directory: ${fullPath}`, e);
+            }
+          } else {
+            try {
+              await fs.promises.unlink(fullPath);
+            } catch (e) {
+              console.warn(`Could not delete temp file: ${fullPath}`, e);
+            }
           }
         }
-      }
+      };
+
+      await deleteRecursive(rootTempDir);
+      console.log('[Cleanup] Root temp directory cleared');
     }
   }
 

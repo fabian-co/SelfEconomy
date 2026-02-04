@@ -187,6 +187,28 @@ export async function POST(request: Request) {
 
       const { text, tempTxtPath } = await ProcessorService.extractText(sourcePath, password, sessionId);
       const result = await ProcessorService.processWithTemplate(tempTxtPath, templatePath);
+
+      const templateContent = JSON.parse(await fs.promises.readFile(templatePath, 'utf-8'));
+
+      if (sessionId) {
+        // Save versioned template (v1)
+        const versionedTemplate = await TemplateService.saveTempTemplateVersioned(templateContent, fileExt, sessionId);
+        const version = versionedTemplate.version;
+
+        const finalResult = {
+          ...result,
+          template_config: {
+            ...templateContent,
+            fileName: path.basename(versionedTemplate.path)
+          },
+          version
+        };
+
+        // Save versioned processed JSON (v1)
+        await TransactionService.saveTempProcessedDataVersioned(finalResult, sessionId, version);
+        return NextResponse.json(finalResult);
+      }
+
       return NextResponse.json(result);
     }
 
