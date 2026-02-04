@@ -7,8 +7,9 @@ import { getPythonPath, getScriptPath } from '../lib/utils';
 const execAsync = promisify(exec);
 
 export class ProcessorService {
-  static async extractText(sourcePath: string, password?: string) {
-    const tempTxtPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'temp', `${path.basename(sourcePath)}.txt`);
+  static async extractText(sourcePath: string, password?: string, sessionId?: string) {
+    const prefix = sessionId ? `session_${sessionId}_` : '';
+    const tempTxtPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'temp', `${prefix}${path.basename(sourcePath)}.txt`);
     await fs.promises.mkdir(path.dirname(tempTxtPath), { recursive: true });
 
     let cmd = `"${getPythonPath()}" "${getScriptPath('extract_text.py')}" --input "${sourcePath}" --output "${tempTxtPath}"`;

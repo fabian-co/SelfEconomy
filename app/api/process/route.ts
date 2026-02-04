@@ -5,6 +5,7 @@ import { getSourcePath, normalizeText, getTempPreprocessedDir } from './lib/util
 import { TemplateService } from './services/template.service';
 import { ProcessorService } from './services/processor.service';
 import { TransactionService } from './services/transaction.service';
+import { CleanupService } from './services/cleanup.service';
 
 export async function POST(request: Request) {
   try {
@@ -75,12 +76,20 @@ export async function POST(request: Request) {
     // -- Action: AI Process with Template --
     if (action === 'ai_process_with_template' || action === 'ai_feedback') {
       try {
-        const { text, tempTxtPath } = await ProcessorService.extractText(currentProcessPath, password);
+        let { text, tempTxtPath } = await ProcessorService.extractText(currentProcessPath, password, sessionId);
         const normalizedContent = normalizeText(text);
 
         let template;
 
+        let cleanup_performed = false;
         if (action === 'ai_feedback') {
+          // Detect if user wants to delete/cleanup content
+          if (CleanupService.shouldCleanup(feedbackMessage)) {
+            await CleanupService.applyCleanup(tempTxtPath, feedbackMessage);
+            // Update text for AI context
+            text = await fs.promises.readFile(tempTxtPath, 'utf-8');
+            cleanup_performed = true;
+          }
 
           // Read current temp JSON if exists to provide context to AI
           let currentData = null;
@@ -147,7 +156,8 @@ export async function POST(request: Request) {
             ...template,
             fileName: path.basename(tempTemplatePath)
           },
-          version
+          version,
+          cleanup_performed
         };
 
         // Save versioned or regular temp JSON
@@ -175,16 +185,14 @@ export async function POST(request: Request) {
 
       if (!fs.existsSync(templatePath)) return NextResponse.json({ error: 'Template no encontrado' }, { status: 404 });
 
-      const { text, tempTxtPath } = await ProcessorService.extractText(sourcePath, password);
+      const { text, tempTxtPath } = await ProcessorService.extractText(sourcePath, password, sessionId);
       const result = await ProcessorService.processWithTemplate(tempTxtPath, templatePath);
-      await fs.promises.unlink(tempTxtPath);
       return NextResponse.json(result);
     }
 
     // -- Action: AI Extract (Legacy check for match) --
     if (action === 'ai_extract') {
-      const { text, tempTxtPath } = await ProcessorService.extractText(sourcePath, password);
-      await fs.promises.unlink(tempTxtPath);
+      const { text, tempTxtPath } = await ProcessorService.extractText(sourcePath, password, sessionId);
       const matchedTemplate = await TemplateService.matchExistingTemplate(normalizeText(text), fileExt);
       return NextResponse.json({ success: true, text, matchedTemplate });
     }
