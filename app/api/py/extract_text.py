@@ -10,23 +10,59 @@ def extract_text_from_pdf(file_path, password=None):
     try:
         with pdfplumber.open(file_path, password=password) as pdf:
             for i, page in enumerate(pdf.pages):
-                page_text = page.extract_text()
-                if page_text:
-                    text_content.append(f"--- PÁGINA {i+1} ---\n{page_text}")
+                # We want to ensure that descriptions spanning multiple lines are captured together.
+                # Table-based extraction is superior for bank statements as it preserves cell unity.
+                
+                # 1. Try to extract tables with multiple strategies
+                table_settings = {
+                    "vertical_strategy": "text", 
+                    "horizontal_strategy": "text",
+                    "snap_tolerance": 3,
+                }
+                
+                tables = page.extract_tables() # Strategy 1: Visible lines
+                if not tables:
+                    tables = page.extract_tables(table_settings=table_settings) # Strategy 2: Text alignment
+                
+                table_text = ""
+                if tables:
+                    for table in tables:
+                        for row in table:
+                            if row and any(row):
+                                # Join multi-line cells with space and strip extra whitespace
+                                # This ensures that descriptions that span multiple lines in the PDF are captured as a single line.
+                                clean_row = [str(cell).replace('\n', ' ').strip() if cell else "" for cell in row]
+                                # We use a VERY wide separator (10 spaces) to distinguish structured columns from normal text flow.
+                                table_text += "          ".join(clean_row) + "\n"
+                        table_text += "\n"
+                
+                # 2. Get the normal text for non-tabular data (headers, summaries, etc.)
+                raw_text = page.extract_text() or ""
+                
+                # 3. Combine both representations
+                page_output = [f"--- PÁGINA {i+1} ---"]
+                
+                if table_text.strip():
+                    page_output.append("[ESTRUCTURA_TABULAR_CON_DESCRIPCIONES_COMPLETAS]")
+                    page_output.append("💡 Este bloque es el más preciso. Usa \\s{5,} como separador de columnas.")
+                    page_output.append(table_text)
+                
+                page_output.append("[TEXTO_RAW_SIN_PROCESAR]")
+                page_output.append(raw_text)
+                
+                text_content.append("\n".join(page_output))
+                
     except Exception as e:
         error_msg = str(e).lower()
         error_type = type(e).__name__.lower()
         
-        # Check for password-related errors:
-        # 1. Keywords in error message
-        # 2. Empty error message (common with encrypted PDFs)
-        # 3. Exception type contains relevant keywords
+        # Check for password-related errors
         password_keywords = ["password", "encrypted", "decrypt", "pdfsyntax", "pdfpassword"]
         
         is_password_error = (
             any(keyword in error_msg for keyword in password_keywords) or
             any(keyword in error_type for keyword in password_keywords) or
-            (error_msg.strip() == "" or error_msg.strip() == "none")  # Empty message often means encryption
+            (error_msg.strip() == "" or error_msg.strip() == "none")
         )
         
         if is_password_error:
@@ -72,8 +108,10 @@ if __name__ == "__main__":
             text = extract_text_from_pdf(args.input, args.password)
         elif file_ext in ['.xlsx', '.xls']:
             text = extract_text_from_excel(args.input)
+            text = "[ESTRUCTURA_TABULAR_CON_DESCRIPCIONES_COMPLETAS]\n" + text
         elif file_ext == '.csv':
             text = extract_text_from_csv(args.input)
+            text = "[ESTRUCTURA_TABULAR_CON_DESCRIPCIONES_COMPLETAS]\n" + text
         else:
             raise Exception(f"Extensión de archivo no soportada: {file_ext}")
             

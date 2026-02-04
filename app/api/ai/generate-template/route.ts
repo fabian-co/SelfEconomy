@@ -99,6 +99,11 @@ PRINCIPIOS CRÍTICOS DE DISEÑO (NO LOS ROMPAS):
 4. **ESPACIOS:** Usa siempre '\\s+' en lugar de un espacio simple ' ', ya que los PDFs a veces tienen espacios múltiples invisibles.
 5. **FECHAS:** Si la fecha está al principio de la línea, usa la estructura exacta (ej: '\\d{2}\\s[A-Z]{3}').
 
+💡 TIP DE EXTRACCIÓN: 
+El texto contiene una sección [ESTRUCTURA_TABULAR_CON_DESCRIPCIONES_COMPLETAS]. Esta sección es la más confiable porque ha unido celdas multilínea (descripciones largas) en una sola línea. 
+- **RECOMENDACIÓN:** Crea tu regex basándote en esta sección.
+- **SEPARADOR:** Los datos en esta sección están separados por 10 espacios. Usa '\\s{5,}' en tu regex para identificar el cambio de columna.
+
 VALIDACIÓN:
 En el campo 'validation', demuestra que tu regex funciona extrayendo 3 líneas del texto de abajo, asegurándote de capturar solo fecha, descripción y valor, ignorando el saldo.
 `;
