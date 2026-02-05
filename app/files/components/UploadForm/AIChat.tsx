@@ -78,19 +78,30 @@ export function AIChat({ onSendMessage, isLoading }: AIChatProps) {
       </ScrollArea>
 
       <div className="p-3 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800">
-        <div className="relative group">
-          <input
+        <div className="relative group flex items-end gap-2">
+          <textarea
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+            onChange={(e) => {
+              setInput(e.target.value);
+              // Auto-resize
+              e.target.style.height = 'auto';
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
             placeholder="Ej: Invierte los signos..."
-            className="w-full bg-zinc-100 dark:bg-zinc-900 border-none rounded-xl py-2.5 pl-4 pr-10 text-[11px] placeholder:text-zinc-500 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+            rows={1}
+            className="w-full bg-zinc-100 dark:bg-zinc-900 border-none rounded-xl py-2.5 pl-4 pr-10 text-[11px] placeholder:text-zinc-500 focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none min-h-[38px] max-h-[120px] overflow-y-auto"
             disabled={isLoading}
           />
           <button
             onClick={handleSend}
             disabled={isLoading || !input.trim()}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-30"
+            className="absolute right-2 bottom-1.5 p-1.5 text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 rounded-lg transition-colors disabled:opacity-30"
           >
             <SendIcon className="h-4 w-4" />
           </button>
