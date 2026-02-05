@@ -11,13 +11,14 @@ export class CleanupService {
    * Determina si el mensaje del usuario indica una intención de eliminar o filtrar contenido.
    */
   static shouldCleanup(message: string): boolean {
-    const keywords = [
-      'elimina', 'borra', 'quita', 'omite', 'ignora', 'limpia',
-      'remove', 'delete', 'clear', 'exclude', 'sin las lineas',
-      'no quiero las', 'no incluyas'
+    const physicalKeywords = [
+      'borra las lineas', 'quita las cabeceras', 'limpia el texto',
+      'remove headers', 'clear raw text', 'elimina lineas ruidosas'
     ];
+    // Instructions about specific transaction descriptions (like "Comisión") 
+    // should be handled by regex/ignore_patterns in the template, not physical deletion.
     const msg = message.toLowerCase();
-    return keywords.some(k => msg.includes(k));
+    return physicalKeywords.some(k => msg.includes(k)) && !msg.includes('transacciones') && !msg.includes('transaccion');
   }
 
   /**

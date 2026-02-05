@@ -1,23 +1,26 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { SendIcon, Loader2Icon, SparklesIcon } from "lucide-react";
+import { SendIcon, Loader2Icon, SparklesIcon, Undo2Icon } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Message {
   role: 'user' | 'ai';
   content: string;
+  version?: number; // The version BEFORE this message was sent (for undo)
 }
 
 interface AIChatProps {
   onSendMessage: (message: string) => Promise<void>;
+  onUndo: (targetVersion: number) => Promise<void>;
   isLoading: boolean;
+  currentVersion: number;
 }
 
-export function AIChat({ onSendMessage, isLoading }: AIChatProps) {
+export function AIChat({ onSendMessage, onUndo, isLoading, currentVersion }: AIChatProps) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'ai', content: '¿Hay algo que deba corregir? Puedo invertir signos o ignorar líneas específicas.' }
+    { role: 'ai', content: '¿Hay algo que deba corregir? Puedo invertir signos, editar o eliminar transacciones específicas.' }
   ]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -31,8 +34,9 @@ export function AIChat({ onSendMessage, isLoading }: AIChatProps) {
     if (!input.trim() || isLoading) return;
 
     const userMsg = input.trim();
+    const versionBeforeSend = currentVersion;
     setInput("");
-    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setMessages(prev => [...prev, { role: 'user', content: userMsg, version: versionBeforeSend }]);
 
     try {
       await onSendMessage(userMsg);
@@ -41,6 +45,19 @@ export function AIChat({ onSendMessage, isLoading }: AIChatProps) {
       setMessages(prev => [...prev, { role: 'ai', content: `Error: ${error.message}` }]);
     }
   };
+
+  const handleUndo = async (targetVersion: number, messageIndex: number) => {
+    try {
+      await onUndo(targetVersion);
+      // Remove messages from this point onward
+      setMessages(prev => prev.slice(0, messageIndex));
+    } catch (error: any) {
+      console.error("Error undoing:", error);
+    }
+  };
+
+  // Find the last user message index for showing the undo button
+  const lastUserMessageIndex = messages.map((m, i) => m.role === 'user' ? i : -1).filter(i => i !== -1).pop();
 
   return (
     <div className="flex flex-col h-full bg-zinc-50 dark:bg-zinc-900/30 rounded-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden">
@@ -54,7 +71,7 @@ export function AIChat({ onSendMessage, isLoading }: AIChatProps) {
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              className={`flex items-center gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
               <div
                 className={`max-w-[85%] rounded-2xl px-3 py-2 text-[11px] leading-relaxed ${msg.role === 'user'
@@ -64,6 +81,15 @@ export function AIChat({ onSendMessage, isLoading }: AIChatProps) {
               >
                 {msg.content}
               </div>
+              {msg.role === 'user' && i === lastUserMessageIndex && msg.version !== undefined && !isLoading && (
+                <button
+                  onClick={() => handleUndo(msg.version!, i)}
+                  className="p-1.5 text-zinc-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-lg transition-colors"
+                  title="Deshacer este cambio"
+                >
+                  <Undo2Icon className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           ))}
           {isLoading && (
@@ -83,7 +109,6 @@ export function AIChat({ onSendMessage, isLoading }: AIChatProps) {
             value={input}
             onChange={(e) => {
               setInput(e.target.value);
-              // Auto-resize
               e.target.style.height = 'auto';
               e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
             }}
@@ -93,7 +118,7 @@ export function AIChat({ onSendMessage, isLoading }: AIChatProps) {
                 handleSend();
               }
             }}
-            placeholder="Ej: Invierte los signos..."
+            placeholder="Ej: Cambia el valor de Railway a 3500..."
             rows={1}
             className="w-full bg-zinc-100 dark:bg-zinc-900 border-none rounded-xl py-2.5 pl-4 pr-10 text-[11px] placeholder:text-zinc-500 focus:ring-2 focus:ring-emerald-500/20 transition-all resize-none min-h-[38px] max-h-[120px] overflow-y-auto"
             disabled={isLoading}

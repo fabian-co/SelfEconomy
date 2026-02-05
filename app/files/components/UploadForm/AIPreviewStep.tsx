@@ -14,9 +14,11 @@ interface AIPreviewStepProps extends SharedStepProps {
   onBack: () => void;
   onConfirm: () => void;
   onFeedback: (message: string) => Promise<void>;
+  onUndo: (targetVersion: number) => Promise<void>;
   onUpdateTransaction: (data: any) => void;
   pendingRules: any[];
   isChatLoading: boolean;
+  currentVersion: number;
 }
 
 export function AIPreviewStep({
@@ -26,9 +28,11 @@ export function AIPreviewStep({
   onBack,
   onConfirm,
   onFeedback,
+  onUndo,
   onUpdateTransaction,
   pendingRules,
-  isChatLoading
+  isChatLoading,
+  currentVersion
 }: AIPreviewStepProps) {
   const { setValue, watch } = form;
   const selectedBank = watch("bank");
@@ -80,7 +84,12 @@ export function AIPreviewStep({
 
         {/* Right Column: AI Chat */}
         <div className="w-full md:w-[280px] shrink-0 h-[450px] md:h-full">
-          <AIChat onSendMessage={onFeedback} isLoading={isChatLoading} />
+          <AIChat
+            onSendMessage={onFeedback}
+            onUndo={onUndo}
+            isLoading={isChatLoading}
+            currentVersion={currentVersion}
+          />
         </div>
       </div>
 

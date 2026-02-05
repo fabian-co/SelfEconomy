@@ -388,6 +388,44 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
     }
   };
 
+  const handleUndo = async (targetVersion: number) => {
+    console.log('[Undo] Starting undo to version:', targetVersion, 'sessionId:', sessionId);
+    setIsChatLoading(true);
+    try {
+      const res = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'revert_version',
+          sessionId,
+          targetVersion
+        }),
+      });
+
+      const data = await res.json();
+      console.log('[Undo] Response status:', res.ok);
+      console.log('[Undo] Received data:', data);
+      console.log('[Undo] Transactions count:', data?.transacciones?.length);
+
+      if (!res.ok) throw new Error(data.error || 'Error al deshacer');
+
+      console.log('[Undo] Setting aiData with new data...');
+      setAiData(data);
+
+      if (data.version) {
+        console.log('[Undo] Setting currentVersion to:', data.version);
+        setCurrentVersion(data.version);
+      }
+      toast.success(`Revertido a la versión ${targetVersion}`);
+    } catch (error: any) {
+      console.error('[Undo] Error:', error);
+      toast.error(error.message);
+      throw error;
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
   const processFile = async (filePath: string, paymentKeywords: string[] = []) => {
     setIsUploading(true);
     try {
@@ -487,9 +525,11 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             onBack={() => setStep('upload')}
             onConfirm={handleAiConfirm}
             onFeedback={handleAiFeedback}
+            onUndo={handleUndo}
             onUpdateTransaction={handleTransactionUpdate}
             pendingRules={pendingRules}
             isChatLoading={isChatLoading}
+            currentVersion={currentVersion}
           />
         )}
 

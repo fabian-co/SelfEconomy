@@ -75,6 +75,17 @@ export class TransactionService {
     return { data: JSON.parse(content), version: maxVersion, path: fullPath };
   }
 
+  static async getTempProcessedDataByVersion(sessionId: string, version: number): Promise<{ data: any; version: number; path: string } | null> {
+    const tempDir = getTempProcessedDir();
+    const fileName = `${sessionId}_v${version}.json`;
+    const fullPath = path.join(tempDir, fileName);
+
+    if (!fs.existsSync(fullPath)) return null;
+
+    const content = await fs.promises.readFile(fullPath, 'utf-8');
+    return { data: JSON.parse(content), version, path: fullPath };
+  }
+
   static async clearTempProcessedData() {
     const rootTempDir = getRootDirTemp();
 

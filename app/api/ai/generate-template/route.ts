@@ -91,18 +91,21 @@ INPUT DEL SISTEMA:
 
 PRINCIPIOS CRÍTICOS DE DISEÑO (NO LOS ROMPAS):
 1. **COLUMNAS:** Solo nos interesan 3 datos: **fecha**, **descripcion** y **valor**.
-   - 🚨 **IMPORTANTE:** Si existe una columna llamada "saldo" (o balance/acumulado), debés **IGNORARLA COMPLETAMENTE**. No la incluyas en ningún grupo de captura ni en el regex.
-2. **ANCLAJE:** No uses regex débiles como '.*'. Usa anclas. Ejemplo: Si el monto siempre tiene '$', usa '\\$' en el regex.
-3. **DESCRIPCIONES:** Las descripciones de compras CONTIENEN NÚMEROS (ej: "Uber 360", "Calle 13"). 
-   - 🚫 PROHIBIDO USAR: '[^\\d]+' (esto rompe la descripción al primer número).
-   - ✅ MEJOR USAR: '((?:(?!\\$).)+?)' (Lookahead: toma todo hasta ver el signo de moneda) o '(.*?)' (Non-greedy).
-4. **ESPACIOS:** Usa siempre '\\s+' en lugar de un espacio simple ' ', ya que los PDFs a veces tienen espacios múltiples invisibles.
-5. **FECHAS:** Si la fecha está al principio de la línea, usa la estructura exacta (ej: '\\d{2}\\s[A-Z]{3}').
+   - 🚨 **IMPORTANTE:** Si existe una columna llamada "saldo" (o balance/acumulado), debés **IGNORARLA COMPLETAMENTE**.
+2. **ANCLAJE:**
+   - 🚫 **PROHIBIDO:** Usar \`^\` y \`$\` a menos que estés absolutamente seguro de capturar la línea ENTERA. Los extractos suelen tener ruido invisible al inicio/final.
+   - ✅ **RECOMENDACIÓN:** Usa anclas de contenido como el signo de moneda ($) o el patrón de fecha.
+3. **DESCRIPCIONES Y VALORES MÚLTIPLES:**
+   - 🚨 **CASO CRÍTICO:** Si una línea tiene varios montos con $ (ej: "Railway $3.333,84 $360,05 $76.678"), identifica cuál es el "Valor" real (usualmente el primero después de la descripción).
+   - 🚫 **PROHIBIDO:** Usar patterns que consuman todo hasta el final de la línea o que usen Lookahead codicioso si hay varios $.
+   - ✅ **ESTRATEGIA:** Usa \`((?:(?!\\s+\\$).)+?)\` para la descripción y asegúrate de capturar el primer monto inmediatamente después, dejando el resto sin capturar.
+4. **ESPACIOS:** Usa siempre \`\\s+\` o \`\\s{2,}\` para saltar entre columnas.
+5. **LÓGICA DE SIGNOS:**
+   - Tarjetas de CRÉDITO = Compras son negativas por defecto. Abonos/Pagos son positivos.
 
 💡 TIP DE EXTRACCIÓN: 
-El texto contiene una sección [ESTRUCTURA_TABULAR_CON_DESCRIPCIONES_COMPLETAS]. Esta sección es la más confiable porque ha unido celdas multilínea (descripciones largas) en una sola línea. 
-- **RECOMENDACIÓN:** Crea tu regex basándote en esta sección.
-- **SEPARADOR:** Los datos en esta sección están separados por 10 espacios. Usa '\\s{5,}' en tu regex para identificar el cambio de columna.
+Usa la sección [ESTRUCTURA_TABULAR_CON_DESCRIPCIONES_COMPLETAS]. 
+- **SEPARADOR:** Los datos están separados por 5 o más espacios (\`\\s{5,}\`).
 
 VALIDACIÓN:
 En el campo 'validation', demuestra que tu regex funciona extrayendo 3 líneas del texto de abajo, asegurándote de capturar solo fecha, descripción y valor, ignorando el saldo.
@@ -118,9 +121,9 @@ REGEX FALLIDO: "${previousTemplate.transaction_regex}"
 FEEDBACK DEL USUARIO: "${feedback}"
 
 INSTRUCCIONES PARA LA CORRECCIÓN:
-1. NO reinicies el regex desde cero si ya capturaba bien algunas partes. Ajusta SOLO lo que falló.
-2. Si el usuario dice que faltan datos, haz el regex un poco más permisivo en los espacios.
-3. Si el usuario dice que la descripción se corta, revisa si usaste '[^\\d]' y cámbialo por un patrón que acepte todo hasta el monto.
+1. AJUSTA el regex para que no corte las descripciones. Si un usuario reporta que faltan datos, es probable que tu delimitador ($ o espacios) esté mal posicionado.
+2. REVISA la lógica de signos. Si el extracto es de crédito, verifica que las compras se resten y los pagos se sumen.
+3. Si el usuario pide "quitar" algo, puedes agregarlo a 'ignore_patterns' en lugar de intentar borrarlo físicamente del archivo, a menos que sea ruido masivo.
 4. Analiza el "Texto del Extracto" abajo para encontrar el caso específico que menciona el usuario.
 `;
     }

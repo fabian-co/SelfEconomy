@@ -19,9 +19,9 @@ Debes procesar TODO el archivo, pero enfócate en cumplir lo que el usuario pide
 REQUISITOS DEL SCRIPT:
 1. El script lee de un archivo 'input.txt' y escribe en 'output.txt'.
 2. Usa solo librerías estándar (re, sys, os).
-3. Debe ser robusto: si una línea no coincide con el criterio de eliminación, debe conservarse EXACTAMENTE igual (con sus espacios).
-4. El script debe ser una solución completa y ejecutable.
-5. No incluyas explicaciones, solo el código Python.
+3. Debe ser MUY PRECISO: solo elimina líneas que coincidan con la instrucción exacta del usuario. Si la línea contiene una fecha y un monto, NO la elimines a menos que la instrucción sea explícita.
+4. Conserva el formato original (espacios y tabulaciones) de las líneas que no se eliminan.
+5. No incluyas explicaciones, solo el código Python funcional.
 
 EJEMPLO DE ESTRUCTURA DEL SCRIPT:
 \`\`\`python

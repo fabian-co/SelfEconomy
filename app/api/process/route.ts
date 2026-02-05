@@ -6,6 +6,8 @@ import { TemplateService } from './services/template.service';
 import { ProcessorService } from './services/processor.service';
 import { TransactionService } from './services/transaction.service';
 import { CleanupService } from './services/cleanup.service';
+import { TemplateEditorService } from './services/template-editor.service';
+import { TransactionEditorService } from './services/transaction-editor.service';
 
 export async function POST(request: Request) {
   try {
@@ -38,6 +40,29 @@ export async function POST(request: Request) {
       const { templateFileName, newEntityName } = body;
       const newFileName = await TemplateService.renameTemplate(templateFileName, newEntityName);
       return NextResponse.json({ success: true, message: 'Template renombrado', newFileName });
+    }
+
+    if (action === 'update_template' && sessionId) {
+      const { version, newRegex, tempTxtPath } = body;
+      const result = await TemplateEditorService.updateRegex(sessionId, version, newRegex, tempTxtPath);
+      return NextResponse.json(result);
+    }
+
+    if (action === 'update_transaction' && sessionId) {
+      const { version, txId, updates } = body;
+      await TransactionEditorService.updateTransaction(sessionId, version, txId, updates);
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'revert_version' && sessionId) {
+      const { targetVersion } = body;
+      console.log('[Revert] Request:', sessionId, targetVersion);
+      const processedData = await TransactionService.getTempProcessedDataByVersion(sessionId, targetVersion);
+      console.log('[Revert] Found data:', !!processedData);
+      if (!processedData) {
+        return NextResponse.json({ error: `Versión ${targetVersion} no encontrada` }, { status: 404 });
+      }
+      return NextResponse.json({ ...processedData.data, version: targetVersion });
     }
 
     if (!filePath) {
@@ -83,38 +108,85 @@ export async function POST(request: Request) {
 
         let cleanup_performed = false;
         if (action === 'ai_feedback') {
-          // Detect if user wants to delete/cleanup content
-          if (CleanupService.shouldCleanup(feedbackMessage)) {
-            await CleanupService.applyCleanup(tempTxtPath, feedbackMessage);
-            // Update text for AI context
-            text = await fs.promises.readFile(tempTxtPath, 'utf-8');
-            cleanup_performed = true;
+          // Read current temp JSON and template if exists to provide context to AI
+          let currentTransactions = [];
+          let templateToRefine = previousTemplate;
+          let currentVersion = 1;
+
+          if (sessionId) {
+            const [latestTemplate, latestProcessed] = await Promise.all([
+              TemplateService.getLatestTempTemplate(sessionId),
+              TransactionService.getLatestTempProcessedData(sessionId)
+            ]);
+
+            if (latestTemplate) {
+              templateToRefine = latestTemplate.template;
+              currentVersion = latestTemplate.version;
+              console.log(`[AI Feedback] Using latest template version: ${currentVersion}`);
+            }
+            if (latestProcessed) {
+              currentTransactions = latestProcessed.data.transacciones || [];
+            }
           }
 
-          // Read current temp JSON if exists to provide context to AI
-          let currentData = null;
-          const fileName = path.basename(filePath, path.extname(filePath));
-          const tempPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', 'temp', `${fileName}.json`);
-          if (fs.existsSync(tempPath)) {
-            currentData = JSON.parse(await fs.promises.readFile(tempPath, 'utf-8'));
-          }
+          console.log('[AI Feedback] Refining state with surgical assistant...');
 
-          console.log('[AI Feedback] Refining template with user message...');
-          const aiRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/ai/generate-template`, {
+          const aiRes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/ai/refine-assistant`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               text,
-              fileExtension: fileExt,
               feedback: feedbackMessage,
-              previousTemplate,
-              currentTransactions: currentData?.transacciones || []
+              previousTemplate: templateToRefine,
+              currentTransactions: currentTransactions.slice(0, 50) // Increased for better context
             }),
           });
 
-          if (!aiRes.ok) throw new Error('Error refinando template con IA');
-          const aiResult = await aiRes.json();
-          template = aiResult.template;
+          if (!aiRes.ok) throw new Error('Error en el asistente de refinamiento');
+          const { toolCalls } = await aiRes.json();
+
+          let activeTemplate = templateToRefine;
+          let activeVersion = currentVersion;
+
+          // Apply surgical tools
+          for (const tc of (toolCalls || [])) {
+            console.log(`[AI Feedback] Applying tool: ${tc.toolName}`, tc.args);
+
+            // Skip if no args (AI might have issues)
+            if (!tc.args) {
+              console.warn(`[AI Feedback] Skipping ${tc.toolName} - no args provided`);
+              continue;
+            }
+
+            if (tc.toolName === 'add_ignore_rule' && sessionId && tc.args.pattern) {
+              const res = await TemplateEditorService.addIgnorePattern(sessionId, activeVersion, tc.args.pattern);
+              activeTemplate = res.template;
+              activeVersion = res.version;
+            } else if (tc.toolName === 'add_flip_rule' && sessionId && tc.args.pattern) {
+              const res = await TemplateEditorService.addPositivePattern(sessionId, activeVersion, tc.args.pattern);
+              activeTemplate = res.template;
+              activeVersion = res.version;
+            } else if (tc.toolName === 'update_extraction_regex' && sessionId && tc.args.new_regex) {
+              const res = await TemplateEditorService.updateRegex(sessionId, activeVersion, tc.args.new_regex, tempTxtPath);
+              activeTemplate = res.template_config;
+              activeVersion = res.version;
+            } else if (tc.toolName === 'physical_cleanup' && tc.args.instruction) {
+              await CleanupService.applyCleanup(tempTxtPath, tc.args.instruction);
+              cleanup_performed = true;
+            } else if (tc.toolName === 'edit_transaction' && sessionId && tc.args.tx_id) {
+              await TransactionEditorService.updateTransaction(sessionId, activeVersion, tc.args.tx_id, tc.args.updates);
+              activeVersion++;
+            } else if (tc.toolName === 'delete_transaction' && sessionId && tc.args.tx_id) {
+              await TransactionEditorService.updateTransaction(sessionId, activeVersion, tc.args.tx_id, null);
+              activeVersion++;
+            }
+          }
+
+          template = activeTemplate;
+          // Update text if cleanup was performed
+          if (cleanup_performed) {
+            text = await fs.promises.readFile(tempTxtPath, 'utf-8');
+          }
 
         } else {
           template = await TemplateService.matchExistingTemplate(normalizedContent, fileExt);
