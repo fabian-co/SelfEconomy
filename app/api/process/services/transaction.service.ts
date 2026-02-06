@@ -9,17 +9,31 @@ export class TransactionService {
 
     // Get bank name from data or use 'other'
     const bankName = data.meta_info?.banco || 'other';
-    const normalizedBankName = bankName
-      .toLowerCase()
-      .replace(/\s+/g, '_')
-      .replace(/[^a-z0-9_]/g, '');
+    // Normalize helper: simplified alphanumeric lowercased
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const targetNormalized = normalize(bankName);
+
+    let targetFolderName = bankName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
+    // Check for existing matching folder
+    try {
+      const entries = await fs.promises.readdir(processedDir, { withFileTypes: true });
+      const existingFolders = entries.filter(e => e.isDirectory()).map(e => e.name);
+
+      const match = existingFolders.find(folder => normalize(folder) === targetNormalized);
+      if (match) {
+        targetFolderName = match;
+      }
+    } catch (e) {
+      // If error reading directory, proceed with default targetFolderName
+    }
 
     // Create bank subfolder
-    const bankFolder = path.join(processedDir, normalizedBankName);
+    const bankFolder = path.join(processedDir, targetFolderName);
     await fs.promises.mkdir(bankFolder, { recursive: true });
 
     // Get next numbered filename
-    const numberedName = await this.getNextNumberedName(bankFolder, normalizedBankName);
+    const numberedName = await this.getNextNumberedName(bankFolder, targetFolderName);
     const outputPath = path.join(bankFolder, `${numberedName}.json`);
 
     // Add UUID to each transaction if not already present

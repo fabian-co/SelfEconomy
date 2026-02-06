@@ -113,6 +113,7 @@ export default function FilesPage() {
           isOpen={isUploadOpen}
           onClose={() => setIsUploadOpen(false)}
           onUploadSuccess={fetchFiles}
+          existingBanks={banks.map(b => b.bankName)}
         />
 
         <EditFileModal

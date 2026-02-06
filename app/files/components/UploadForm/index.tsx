@@ -14,9 +14,11 @@ interface UploadFormProps {
   isOpen: boolean;
   onClose: () => void;
   onUploadSuccess: () => void;
+  existingBanks: string[];
 }
 
-export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps) {
+export function UploadForm({ isOpen, onClose, onUploadSuccess, existingBanks }: UploadFormProps) {
+
   const [isUploading, setIsUploading] = useState(false);
   const [step, setStep] = useState<Step>('upload');
   const [analysisDescriptions, setAnalysisDescriptions] = useState<string[]>([]);
@@ -349,7 +351,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             ...aiData,
             meta_info: {
               ...aiData.meta_info,
-              banco: watch("extractName") || aiData.meta_info?.banco || "Desconocido",
+              banco: watch("bank") || aiData.meta_info?.banco || "Desconocido",
               tipo_cuenta: aiData.meta_info?.tipo_cuenta || "debit"
             }
           },
@@ -544,6 +546,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             pendingRules={pendingRules}
             isChatLoading={isChatLoading}
             currentVersion={currentVersion}
+            existingBanks={existingBanks}
           />
         )}
 

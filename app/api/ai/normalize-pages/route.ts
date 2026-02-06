@@ -5,6 +5,7 @@ import { z } from 'zod';
 import path from 'path';
 import { TemplateService } from '../../process/services/template.service';
 import { TransactionService } from '../../process/services/transaction.service';
+import { getExistingBanks } from '../../process/lib/bank-utils';
 
 // Schema for page transactions
 const pageTransactionSchema = z.object({
@@ -68,6 +69,9 @@ export async function POST(request: NextRequest) {
         let finalMetadata: any = null;
         let totalUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
 
+        // Fetch existing banks for context
+        const existingBanks = await getExistingBanks();
+
         const prompt = (pageText: string, pageNum: number) => `
 Eres un experto en extracción de datos financieros.
 Tu misión: Analizar el texto de LA PÁGINA ${pageNum} de un extracto bancario y extraer TODAS las transacciones.
@@ -81,6 +85,13 @@ REGLAS:
 4. **IGNORA:** Saldos, totales, encabezados.
 5. **MONEDA:** Remueve símbolos ($, COP, USD).
 6. **FORMATO:** Convierte "1.234,56" o "1,234.56" a números decimales.
+
+6. **FORMATO:** Convierte "1.234,56" o "1,234.56" a números decimales.
+
+CONTEXTO BANCOS EXISTENTES:
+${existingBanks.length > 0 ? `Estos son los bancos ya registrados en el sistema: ${existingBanks.join(', ')}.
+Si el extracto pertenece a uno de estos, USA ESE NOMBRE EXACTAMENTE.
+Si es un banco nuevo, extrae el nombre tal cual aparece.` : 'No hay bancos registrados aun.'}
 
 Si no hay transacciones en esta página, devuelve un array vacío.
 

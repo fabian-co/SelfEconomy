@@ -19,6 +19,7 @@ interface AIPreviewStepProps extends SharedStepProps {
   pendingRules: any[];
   isChatLoading: boolean;
   currentVersion: number;
+  existingBanks: string[];
 }
 
 export function AIPreviewStep({
@@ -32,7 +33,8 @@ export function AIPreviewStep({
   onUpdateTransaction,
   pendingRules,
   isChatLoading,
-  currentVersion
+  currentVersion,
+  existingBanks
 }: AIPreviewStepProps) {
   const { setValue, watch } = form;
   const selectedBank = watch("bank");
@@ -51,7 +53,13 @@ export function AIPreviewStep({
                 onChange={(e) => setValue("bank", e.target.value)}
                 placeholder="Ej: Bancolombia, NuBank..."
                 className="bg-white dark:bg-zinc-950 rounded-xl h-9"
+                list="bank-suggestions"
               />
+              <datalist id="bank-suggestions">
+                {existingBanks.map((bank) => (
+                  <option key={bank} value={bank} />
+                ))}
+              </datalist>
             </div>
             <div className="grid gap-2">
               <Label className="text-[10px] font-bold uppercase text-zinc-500">Tipo de Cuenta <span className="text-rose-500">*</span></Label>
