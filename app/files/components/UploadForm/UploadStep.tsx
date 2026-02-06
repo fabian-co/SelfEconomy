@@ -103,27 +103,6 @@ export function UploadStep({
       ) : (
         <>
           {/* Normal form when not uploading */}
-          <div className="grid gap-2">
-            <Label htmlFor="extractName">
-              Nombre del Banco <span className="text-rose-500">*</span>
-            </Label>
-            <Input
-              id="extractName"
-              placeholder="Ej: Bancolombia, Nu, BBVA"
-              {...register("extractName")}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !isUploading && isValid) {
-                  e.preventDefault();
-                  onSubmit();
-                }
-              }}
-              className={`rounded-xl ${form.formState.errors.extractName ? 'border-rose-500 focus-visible:ring-rose-500/20' : ''}`}
-            />
-            {form.formState.errors.extractName && (
-              <p className="text-[10px] text-rose-500">{form.formState.errors.extractName.message}</p>
-            )}
-          </div>
-
           {isPDF && (
             <div className="grid gap-2">
               <Label htmlFor="password">

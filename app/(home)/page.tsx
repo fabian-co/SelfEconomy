@@ -127,14 +127,15 @@ export default function Home() {
           const originalValor = tx.valor;
           let valor = tx.valor;
 
-          // If marked as positive, flip the sign (income becomes expense, expense becomes income)
-          // If rule is marked positive, ensure sign is positive. Otherwise ensure it's negative (standard behavior for bank data unless specified)
-          // Actually, we use originalValor as baseline to avoid repeated flips.
-          if (isMarkedPositive) {
+          // Only flip the sign when there's an explicit flip rule
+          // Otherwise, preserve the original value from the AI processing
+          const hasFlipRule = descriptionRule || flipRules.byId[txId];
+          if (hasFlipRule && isMarkedPositive) {
             valor = Math.abs(originalValor);
-          } else {
+          } else if (hasFlipRule && !isMarkedPositive) {
             valor = -Math.abs(originalValor);
           }
+          // If no flip rule, keep the original value as-is
 
           return {
             ...tx,
