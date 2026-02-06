@@ -100,6 +100,7 @@ export function TransactionItem({
           transactionId={transactionId}
           currentAmount={value}
           originalAmount={originalValor ?? value}
+          bankName={banco}
           isMarkedPositive={isMarkedPositive}
           isPositiveGlobal={isPositiveGlobal}
           isIgnored={isIgnored}

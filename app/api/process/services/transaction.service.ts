@@ -225,4 +225,118 @@ export class TransactionService {
     await fs.promises.writeFile(jsonPath, JSON.stringify(data, null, 2));
     return data;
   }
+
+  static async updateTransactionSign(params: {
+    transactionId: string;
+    isPositive: boolean;
+    applyGlobally?: boolean;
+    bankName: string;
+    description?: string;
+  }) {
+    const { transactionId, isPositive, applyGlobally, bankName, description } = params;
+    const processedDir = getProcessedDir();
+
+    // Normalize bank folder name to find the correct directory
+    const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const targetNormalized = normalize(bankName);
+
+    let targetFolder = path.join(processedDir); // Default to root if not found (legacy)
+    let isBankFolder = false;
+
+    try {
+      const entries = await fs.promises.readdir(processedDir, { withFileTypes: true });
+      const bankDir = entries.find(e => e.isDirectory() && normalize(e.name) === targetNormalized);
+      if (bankDir) {
+        targetFolder = path.join(processedDir, bankDir.name);
+        isBankFolder = true;
+      }
+    } catch (e) {
+      console.warn("Could not read processed directory", e);
+    }
+
+    // Helper to process a single file
+    const processFileCtx = async (filePath: string) => {
+      let modified = false;
+      const content = await fs.promises.readFile(filePath, 'utf-8');
+      const data = JSON.parse(content);
+      let updatedCount = 0;
+
+      if (data.transacciones) {
+        data.transacciones = data.transacciones.map((tx: any, index: number) => {
+          // Generate an ID if missing (legacy support)
+          const currentId = tx.id || `${tx.fecha}-${tx.descripcion}-${tx.valor}-${index}`;
+
+          let match = false;
+          if (applyGlobally && description) {
+            // Check if description matches (allowing for some fuzzy logic if needed, but strict for now or includes)
+            // The user asked for "same description".
+            match = tx.descripcion === description || tx.originalDescription === description;
+          } else {
+            match = currentId === transactionId;
+          }
+
+          if (match) {
+            const currentVal = Math.abs(tx.valor);
+            const newVal = isPositive ? currentVal : -currentVal;
+
+            if (tx.valor !== newVal) {
+              modified = true;
+              updatedCount++;
+              return {
+                ...tx,
+                valor: newVal,
+                id: currentId,
+                isMarkedPositive: isPositive,
+                isPositiveGlobal: applyGlobally && description ? true : (tx.isPositiveGlobal || false)
+              };
+            }
+          }
+          return { ...tx, id: currentId };
+        });
+      }
+
+      if (modified) {
+        // Recalculate totals for this file
+        // We reuse logic from calculateTotals but we need to ensure we don't double-apply ignore logic if it was already applied
+        // But calculateTotals is safe to re-run
+        const paymentKeywords = data.meta_info?.payment_keywords || data.meta_info?.ignore_keywords || [];
+        const recalculated = this.calculateTotals(data, paymentKeywords);
+        await fs.promises.writeFile(filePath, JSON.stringify(recalculated, null, 2));
+      }
+      return updatedCount;
+    };
+
+    let totalUpdated = 0;
+
+    if (isBankFolder) {
+      // It's a folder, read all JSONs
+      const files = await fs.promises.readdir(targetFolder);
+      const jsonFiles = files.filter(f => f.endsWith('.json'));
+
+      for (const file of jsonFiles) {
+        totalUpdated += await processFileCtx(path.join(targetFolder, file));
+      }
+    } else {
+      // It might be in the root if not found in a subfolder, OR we need to search the root too?
+      // For now, assume if bankName was provided and found, we only search there.
+      // If bankName didn't resolve to a folder, maybe it's a legacy file in the root?
+      // Let's search the root for files that might match or just all files if applyGlobally is true?
+      // Safer to just search where we expect it.
+
+      // Fallback: search all files in processedDir (root) that are JSON
+      const files = await fs.promises.readdir(processedDir);
+      const jsonFiles = files.filter(f => f.endsWith('.json') && fs.statSync(path.join(processedDir, f)).isFile());
+
+      for (const file of jsonFiles) {
+        const content = await fs.promises.readFile(path.join(processedDir, file), 'utf-8');
+        const data = JSON.parse(content);
+        // Only process if bank matches
+        if (normalize(data.meta_info?.banco || '') === targetNormalized) {
+          totalUpdated += await processFileCtx(path.join(processedDir, file));
+        }
+      }
+    }
+
+    return { totalUpdated };
+  }
 }

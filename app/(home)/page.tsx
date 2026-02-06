@@ -20,13 +20,11 @@ export default function Home() {
   };
 
   const rulesPath = path.join(process.cwd(), "custom-data/rules/category-rules.json");
-  const flipRulesPath = path.join(process.cwd(), "custom-data/rules/flip-rules.json");
   const categoriesPath = path.join(process.cwd(), "constants/categories.json");
   const customCategoriesPath = path.join(process.cwd(), "custom-data/categories/custom-categories.json");
   const ignoreRulesPath = path.join(process.cwd(), "custom-data/rules/ignore-rules.json");
 
   let categoryRules: Record<string, any> = {};
-  let flipRules: { byDescription: Record<string, any>; byId: Record<string, any> } = { byDescription: {}, byId: {} };
   let ignoreRules: { byDescription: Record<string, any>; byId: Record<string, any> } = { byDescription: {}, byId: {} };
   let categories: any[] = [];
 
@@ -34,10 +32,7 @@ export default function Home() {
     categoryRules = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
   }
 
-  // Load flip rules
-  if (fs.existsSync(flipRulesPath)) {
-    flipRules = JSON.parse(fs.readFileSync(flipRulesPath, 'utf8'));
-  }
+
 
   // Load ignore rules
   if (fs.existsSync(ignoreRulesPath)) {
@@ -92,25 +87,9 @@ export default function Home() {
             // Generate transaction ID for positive rule lookup
             const txId = tx.id || `${tx.fecha}-${tx.descripcion}-${tx.valor}-${index}`;
 
-            // Check flip rules (by description or by ID)
-            let isMarkedPositive = false;
-            let isPositiveGlobal = false;
-            // Check if there's a flip rule by description (partial match)
-            const descriptionRule = Object.keys(flipRules.byDescription).find(
-              key => originalDescription.includes(key)
-            );
-
-            if (descriptionRule) {
-              isMarkedPositive = flipRules.byDescription[descriptionRule].isPositive === true;
-              isPositiveGlobal = true;
-            } else if (flipRules.byId[txId]) {
-              isMarkedPositive = flipRules.byId[txId].isPositive === true;
-              isPositiveGlobal = false;
-            } else {
-              // Fallback to what was in the AI processed data if no rule exists
-              isMarkedPositive = tx.isMarkedPositive || false;
-              isPositiveGlobal = false;
-            }
+            // Fallback to what was in the AI processed data if no rule exists
+            let isMarkedPositive = tx.isMarkedPositive || false;
+            let isPositiveGlobal = tx.isPositiveGlobal || false;
 
             // Check ignore rules (by description or by ID)
             let isMarkedIgnored = false;
@@ -134,14 +113,7 @@ export default function Home() {
             const originalValor = tx.valor;
             let valor = tx.valor;
 
-            // Only flip the sign when there's an explicit flip rule
-            // Otherwise, preserve the original value from the AI processing
-            const hasFlipRule = descriptionRule || flipRules.byId[txId];
-            if (hasFlipRule && isMarkedPositive) {
-              valor = Math.abs(originalValor);
-            } else if (hasFlipRule && !isMarkedPositive) {
-              valor = -Math.abs(originalValor);
-            }
+
             // If no flip rule, keep the original value as-is
 
             return {

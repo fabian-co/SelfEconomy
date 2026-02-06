@@ -24,8 +24,8 @@ export interface CategoryRule {
 
 export class RuleService {
   private static IGNORE_RULES_PATH = path.join(RULES_BASE_DIR, 'ignore-rules.json');
-  private static FLIP_RULES_PATH = path.join(RULES_BASE_DIR, 'flip-rules.json');
   private static CATEGORY_RULES_PATH = path.join(RULES_BASE_DIR, 'category-rules.json');
+
 
   private static DEFAULT_COLLECTION: RuleCollection = { byDescription: {}, byId: {} };
 
@@ -59,36 +59,7 @@ export class RuleService {
     );
   }
 
-  // --- Flip Rules ---
-  static async getFlipRules(): Promise<RuleCollection> {
-    return JsonStorageService.read<RuleCollection>(this.FLIP_RULES_PATH, this.DEFAULT_COLLECTION);
-  }
 
-  static async updateFlipRule(params: {
-    description?: string;
-    transactionId?: string;
-    isPositive: boolean;
-    isEdited?: boolean;
-    applyGlobally?: boolean;
-  }) {
-    const { description, transactionId, isPositive, isEdited, applyGlobally } = params;
-    const timestamp = new Date().toISOString();
-
-    return JsonStorageService.update<RuleCollection>(
-      this.FLIP_RULES_PATH,
-      (rules) => {
-        if (applyGlobally && description) {
-          rules.byDescription[description] = { isPositive, isEdited, lastUpdated: timestamp };
-          if (transactionId) delete rules.byId[transactionId];
-        } else if (transactionId) {
-          rules.byId[transactionId] = { isPositive, isEdited, lastUpdated: timestamp };
-          if (description) delete rules.byDescription[description];
-        }
-        return rules;
-      },
-      this.DEFAULT_COLLECTION
-    );
-  }
 
   // --- Category Rules ---
   static async getCategoryRules(): Promise<Record<string, CategoryRule>> {

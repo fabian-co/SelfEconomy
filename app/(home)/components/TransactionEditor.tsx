@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Pencil, Loader2, Check } from "lucide-react";
+import { Pencil, Loader2, Check, ArrowUp, ArrowDown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { IconMap } from "./category-manager/constants";
 import { Plus, ChevronDown, Tag, X, TrendingUp } from "lucide-react";
+import { cn, formatCurrency } from "@/lib/utils";
 
 interface TransactionEditorProps {
   description: string;
@@ -25,23 +26,28 @@ interface TransactionEditorProps {
   categoryId?: string;
   categoryName?: string;
   transactionId?: string;
+  currentAmount: number;
+  originalAmount: number;
+  bankName?: string;
+  // Deprecated/Legacy props (keeping for compatibility but ignoring logic)
   isMarkedPositive?: boolean;
   isPositiveGlobal?: boolean;
   isIgnored?: boolean;
   isIgnoredGlobal?: boolean;
-  currentAmount: number;
-  originalAmount: number;
+
   onSave: (data: {
     originalDescription: string,
     description: string,
     categoryId: string,
     categoryName: string,
     applyGlobally: boolean,
-    markAsPositive?: boolean,
-    applyPositiveGlobally?: boolean,
     markAsIgnored?: boolean,
     applyIgnoreGlobally?: boolean,
-    transactionId?: string
+    transactionId?: string,
+    // New fields
+    isPositive?: boolean,
+    applyPositiveGlobally?: boolean,
+    bankName?: string
   }) => Promise<void>;
   trigger?: React.ReactNode;
 }
@@ -52,12 +58,11 @@ export function TransactionEditor({
   categoryId,
   categoryName,
   transactionId,
-  isMarkedPositive,
-  isPositiveGlobal,
-  isIgnored,
-  isIgnoredGlobal,
   currentAmount,
   originalAmount,
+  bankName,
+  isIgnored,
+  isIgnoredGlobal,
   onSave,
   trigger
 }: TransactionEditorProps) {
@@ -66,10 +71,14 @@ export function TransactionEditor({
   const [editDescription, setEditDescription] = useState(description);
   const [selectedCategoryId, setSelectedCategoryId] = useState(categoryId || "");
   const [applyGlobally, setApplyGlobally] = useState(true);
-  const [markAsPositive, setMarkAsPositive] = useState(isMarkedPositive || false);
-  const [applyPositiveGlobally, setApplyPositiveGlobally] = useState(isPositiveGlobal !== undefined ? isPositiveGlobal : true);
+
+  // New Sign Logic
+  const [isPositive, setIsPositive] = useState(currentAmount >= 0);
+  const [applyPositiveGlobally, setApplyPositiveGlobally] = useState(false); // Default off as requested
+
   const [markAsIgnored, setMarkAsIgnored] = useState(isIgnored || false);
   const [applyIgnoreGlobally, setApplyIgnoreGlobally] = useState(isIgnoredGlobal !== undefined ? isIgnoredGlobal : true);
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newName, setNewName] = useState("");
@@ -84,12 +93,11 @@ export function TransactionEditor({
     if (open) {
       setEditDescription(description);
       setSelectedCategoryId(categoryId || "");
-      setMarkAsPositive(isMarkedPositive || false);
-      setApplyPositiveGlobally(isPositiveGlobal !== undefined ? isPositiveGlobal : true);
+      setIsPositive(currentAmount >= 0);
       setMarkAsIgnored(isIgnored || false);
       setApplyIgnoreGlobally(isIgnoredGlobal !== undefined ? isIgnoredGlobal : true);
     }
-  }, [open, description, categoryId, isMarkedPositive, isPositiveGlobal, isIgnored, isIgnoredGlobal]);
+  }, [open, description, categoryId, currentAmount, isIgnored, isIgnoredGlobal]);
 
   useEffect(() => {
     if (open) {
@@ -144,8 +152,10 @@ export function TransactionEditor({
         finalCategoryName = selectedCategory?.name || "";
       }
 
-      // Only include markAsPositive if it changed from the original value
-      const positiveChanged = markAsPositive !== (isMarkedPositive || false);
+      // Detect if sign changed
+      const originalIsPositive = currentAmount >= 0;
+      const signChanged = isPositive !== originalIsPositive;
+
       // Only include markAsIgnored if it changed from the original value
       const ignoredChanged = markAsIgnored !== (isIgnored || false);
 
@@ -155,8 +165,12 @@ export function TransactionEditor({
         categoryId: finalCategoryId,
         categoryName: finalCategoryName,
         applyGlobally,
-        // Only send these fields if they actually changed
-        ...(positiveChanged && { markAsPositive, applyPositiveGlobally }),
+        // Send sign data if changed
+        ...(signChanged && {
+          isPositive,
+          applyPositiveGlobally,
+          bankName
+        }),
         ...(ignoredChanged && { markAsIgnored, applyIgnoreGlobally }),
         transactionId
       });
@@ -167,9 +181,14 @@ export function TransactionEditor({
       router.refresh();
     } catch (error) {
       toast.error("Error al guardar cambios");
+      console.error(error);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const toggleSign = () => {
+    setIsPositive(!isPositive);
   };
 
   return (
@@ -335,60 +354,65 @@ export function TransactionEditor({
             </label>
           </div>
 
-          {/* Mark as Positive (Flip Sign) Section */}
-          <div className={`space-y-3 p-4 rounded-xl border transition-colors duration-300 ${(originalAmount < 0 && !markAsPositive) || (originalAmount > 0 && markAsPositive)
-            ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/30"
-            : "bg-rose-50 dark:bg-rose-950/20 border-rose-100 dark:border-rose-900/30"
-            }`}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <TrendingUp className={`h-4 w-4 ${(originalAmount < 0 && !markAsPositive) || (originalAmount > 0 && markAsPositive)
-                  ? "text-emerald-600 dark:text-emerald-500"
-                  : "text-rose-600 dark:text-rose-500"
-                  }`} />
-                <Label htmlFor="markAsPositive" className={`text-sm font-medium cursor-pointer ${(originalAmount < 0 && !markAsPositive) || (originalAmount > 0 && markAsPositive)
-                  ? "text-emerald-700 dark:text-emerald-400"
-                  : "text-rose-700 dark:text-rose-400"
-                  }`}>
-                  {originalAmount < 0
-                    ? (markAsPositive ? "Desmarcar como ingreso (negativa)" : "Marcar como ingreso (positiva)")
-                    : (markAsPositive ? "Desmarcar como egreso (positiva)" : "Marcar como egreso (negativa)")
-                  }
-                </Label>
+          {/* New Sign Toggle Section */}
+          <div className={cn(
+            "p-5 rounded-2xl border transition-all duration-300",
+            isPositive
+              ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/30"
+              : "bg-rose-50 dark:bg-rose-950/20 border-rose-100 dark:border-rose-900/30"
+          )}>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(
+                      "text-xs font-bold uppercase tracking-wider",
+                      isPositive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                    )}>
+                      {isPositive ? "Ingreso" : "Egreso"}
+                    </span>
+                  </div>
+                  <div className={cn(
+                    "text-2xl font-bold font-mono tracking-tight",
+                    isPositive ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400"
+                  )}>
+                    {isPositive ? "+" : "-"}{formatCurrency(Math.abs(currentAmount))}
+                  </div>
+                </div>
+
+                <div
+                  onClick={toggleSign}
+                  className={cn(
+                    "cursor-pointer p-1.5 rounded-full transition-all duration-200 border-2",
+                    "hover:scale-110 active:scale-95",
+                    isPositive
+                      ? "bg-emerald-100 border-emerald-200 text-emerald-600 shadow-sm hover:shadow-emerald-200 dark:bg-emerald-900/40 dark:border-emerald-800 dark:text-emerald-400"
+                      : "bg-rose-100 border-rose-200 text-rose-600 shadow-sm hover:shadow-rose-200 dark:bg-rose-900/40 dark:border-rose-800 dark:text-rose-400"
+                  )}
+                  title="Cambiar signo"
+                >
+                  {isPositive ? <ArrowUp className="w-6 h-6" /> : <ArrowDown className="w-6 h-6" />}
+                </div>
               </div>
-              <Switch
-                id="markAsPositive"
-                checked={markAsPositive}
-                onCheckedChange={setMarkAsPositive}
-                className={
-                  (originalAmount < 0 && markAsPositive) || (originalAmount > 0 && !markAsPositive)
-                    ? "data-[state=checked]:bg-rose-500"
-                    : "data-[state=checked]:bg-emerald-600"
-                }
-              />
-            </div>
-            <div className={`flex items-center space-x-2 pt-2 border-t ${(originalAmount < 0 && !markAsPositive) || (originalAmount > 0 && markAsPositive)
-              ? "border-emerald-100 dark:border-emerald-900/30"
-              : "border-rose-100 dark:border-rose-900/30"
-              }`}>
-              <Checkbox
-                id="applyPositiveGlobally"
-                checked={applyPositiveGlobally}
-                onCheckedChange={(checked) => setApplyPositiveGlobally(checked as boolean)}
-                className={`rounded-md ${(originalAmount < 0 && !markAsPositive) || (originalAmount > 0 && markAsPositive)
-                  ? "border-emerald-300 dark:border-emerald-700 data-[state=checked]:bg-emerald-600"
-                  : "border-rose-300 dark:border-rose-700 data-[state=checked]:bg-rose-600"
-                  }`}
-              />
-              <label
-                htmlFor="applyPositiveGlobally"
-                className={`text-xs font-medium leading-none cursor-pointer ${(originalAmount < 0 && !markAsPositive) || (originalAmount > 0 && markAsPositive)
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-rose-600 dark:text-rose-400"
-                  }`}
-              >
-                Aplicar a todas las transacciones con esta descripción
-              </label>
+
+              <div className="pt-3 border-t border-black/5 dark:border-white/5">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="applyPositiveGlobally"
+                    checked={applyPositiveGlobally}
+                    onCheckedChange={setApplyPositiveGlobally}
+                    className={cn(
+                      "data-[state=checked]:bg-blue-600"
+                    )}
+                  />
+                  <label
+                    htmlFor="applyPositiveGlobally"
+                    className="text-xs font-medium leading-none cursor-pointer text-zinc-600 dark:text-zinc-400"
+                  >
+                    Aplicar este cambio de signo a todas las transacciones similares
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 
