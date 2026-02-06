@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { getProcessedDir, getTempProcessedDir, getTempPreprocessedDir, getTempDir, getRootDirTemp } from '../lib/utils';
 
 export class TransactionService {
@@ -7,6 +8,14 @@ export class TransactionService {
     const fileName = outputName || path.basename(filePath, path.extname(filePath));
     const processedDir = getProcessedDir();
     const outputPath = path.join(processedDir, `${fileName}.json`);
+
+    // Add UUID to each transaction if not already present
+    if (data.transacciones) {
+      data.transacciones = data.transacciones.map((tx: any) => ({
+        ...tx,
+        id: tx.id || randomUUID()
+      }));
+    }
 
     await fs.promises.mkdir(processedDir, { recursive: true });
     await fs.promises.writeFile(outputPath, JSON.stringify(data, null, 2));

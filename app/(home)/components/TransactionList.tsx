@@ -88,6 +88,18 @@ export function TransactionList({
   const handleUpdateTransaction = async (data: any) => {
     let categorySuccess = true;
 
+    // Update description in JSON if it changed
+    if (data.description && data.transactionId && data.description !== data.originalDescription) {
+      await fetch("/api/transactions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transactionId: data.transactionId,
+          newDescription: data.description
+        }),
+      });
+    }
+
     // Only update category rules if categoryId is provided
     if (data.categoryId) {
       const res = await fetch("/api/category-rules", {
