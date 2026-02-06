@@ -57,158 +57,180 @@ export default function Home() {
 
 
   if (fs.existsSync(processedDir)) {
-    const files = fs.readdirSync(processedDir).filter(f => f.endsWith('.json'));
+    if (fs.existsSync(processedDir)) {
+      // Helper to process a single file
+      const processFile = (filePath: string, bankFolderName?: string) => {
+        try {
+          const content = fs.readFileSync(filePath, 'utf8');
+          const data = JSON.parse(content);
 
-    files.forEach(file => {
-      try {
-        const content = fs.readFileSync(path.join(processedDir, file), 'utf8');
-        const data = JSON.parse(content);
-
-        // Add source/bank info and account type to each transaction
-        const bankName = data.meta_info?.banco || "Bancolombia";
-        const accountType = data.meta_info?.tipo_cuenta || "debit";
-
-        const transactionsWithSource = data.transacciones.map((tx: any, index: number) => {
-          const originalDescription = tx.descripcion;
-          const rule = categoryRules[originalDescription];
-
-          let description = tx.descripcion;
-          let categoryId = tx.categoryId;
-          let categoryName = tx.categoryName;
-
-          if (rule) {
-            description = rule.title || description;
-            categoryId = rule.categoryId;
-            categoryName = rule.categoryName;
+          // Derive bank name from folder if available, else use meta_info or default
+          let bankName = data.meta_info?.banco || "Bancolombia";
+          if (bankFolderName) {
+            // Convert folder name "nu_financiera" to "Nu Financiera"
+            bankName = bankFolderName
+              .replace(/_/g, ' ')
+              .replace(/\b\w/g, c => c.toUpperCase());
           }
 
-          // Generate transaction ID for positive rule lookup
-          const txId = tx.id || `${tx.fecha}-${tx.descripcion}-${tx.valor}-${index}`;
+          const accountType = data.meta_info?.tipo_cuenta || "debit";
 
-          // Check flip rules (by description or by ID)
-          let isMarkedPositive = false;
-          let isPositiveGlobal = false;
-          // Check if there's a flip rule by description (partial match)
-          const descriptionRule = Object.keys(flipRules.byDescription).find(
-            key => originalDescription.includes(key)
-          );
+          const transactionsWithSource = data.transacciones.map((tx: any, index: number) => {
+            const originalDescription = tx.descripcion;
+            const rule = categoryRules[originalDescription];
 
-          if (descriptionRule) {
-            isMarkedPositive = flipRules.byDescription[descriptionRule].isPositive === true;
-            isPositiveGlobal = true;
-          } else if (flipRules.byId[txId]) {
-            isMarkedPositive = flipRules.byId[txId].isPositive === true;
-            isPositiveGlobal = false;
-          } else {
-            // Fallback to what was in the AI processed data if no rule exists
-            isMarkedPositive = tx.isMarkedPositive || false;
-            isPositiveGlobal = false;
+            let description = tx.descripcion;
+            let categoryId = tx.categoryId;
+            let categoryName = tx.categoryName;
+
+            if (rule) {
+              description = rule.title || description;
+              categoryId = rule.categoryId;
+              categoryName = rule.categoryName;
+            }
+
+            // Generate transaction ID for positive rule lookup
+            const txId = tx.id || `${tx.fecha}-${tx.descripcion}-${tx.valor}-${index}`;
+
+            // Check flip rules (by description or by ID)
+            let isMarkedPositive = false;
+            let isPositiveGlobal = false;
+            // Check if there's a flip rule by description (partial match)
+            const descriptionRule = Object.keys(flipRules.byDescription).find(
+              key => originalDescription.includes(key)
+            );
+
+            if (descriptionRule) {
+              isMarkedPositive = flipRules.byDescription[descriptionRule].isPositive === true;
+              isPositiveGlobal = true;
+            } else if (flipRules.byId[txId]) {
+              isMarkedPositive = flipRules.byId[txId].isPositive === true;
+              isPositiveGlobal = false;
+            } else {
+              // Fallback to what was in the AI processed data if no rule exists
+              isMarkedPositive = tx.isMarkedPositive || false;
+              isPositiveGlobal = false;
+            }
+
+            // Check ignore rules (by description or by ID)
+            let isMarkedIgnored = false;
+            let isIgnoredGlobal = false;
+
+            const ignoreDescriptionRule = Object.keys(ignoreRules.byDescription).find(
+              key => originalDescription.includes(key)
+            );
+
+            if (ignoreDescriptionRule) {
+              isMarkedIgnored = ignoreRules.byDescription[ignoreDescriptionRule].isIgnored === true;
+              isIgnoredGlobal = true;
+            } else if (ignoreRules.byId[txId]) {
+              isMarkedIgnored = ignoreRules.byId[txId].isIgnored === true;
+              isIgnoredGlobal = false;
+            } else {
+              isMarkedIgnored = tx.isMarkedIgnored || false;
+              isIgnoredGlobal = false;
+            }
+
+            const originalValor = tx.valor;
+            let valor = tx.valor;
+
+            // Only flip the sign when there's an explicit flip rule
+            // Otherwise, preserve the original value from the AI processing
+            const hasFlipRule = descriptionRule || flipRules.byId[txId];
+            if (hasFlipRule && isMarkedPositive) {
+              valor = Math.abs(originalValor);
+            } else if (hasFlipRule && !isMarkedPositive) {
+              valor = -Math.abs(originalValor);
+            }
+            // If no flip rule, keep the original value as-is
+
+            return {
+              ...tx,
+              id: txId,
+              originalDescription, // Keep the original for future edits
+              descripcion: description,
+              banco: bankName,
+              tipo_cuenta: accountType,
+              categoryId,
+              categoryName,
+              valor,
+              originalValor,
+              isMarkedPositive,
+              isPositiveGlobal,
+              isMarkedIgnored,
+              isIgnoredGlobal,
+              ignored: isMarkedIgnored
+            };
+          });
+
+          allTransactions = [...allTransactions, ...transactionsWithSource];
+
+          // Aggregate totals
+          metaInfo.resumen.saldo_actual += data.meta_info?.resumen?.saldo_actual || 0;
+
+          // Use earliest date as "desde"
+          if (data.meta_info?.cuenta?.desde < metaInfo.cuenta.desde) {
+            metaInfo.cuenta.desde = data.meta_info.cuenta.desde;
           }
 
-          // Check ignore rules (by description or by ID)
-          let isMarkedIgnored = false;
-          let isIgnoredGlobal = false;
-
-          const ignoreDescriptionRule = Object.keys(ignoreRules.byDescription).find(
-            key => originalDescription.includes(key)
-          );
-
-          if (ignoreDescriptionRule) {
-            isMarkedIgnored = ignoreRules.byDescription[ignoreDescriptionRule].isIgnored === true;
-            isIgnoredGlobal = true;
-          } else if (ignoreRules.byId[txId]) {
-            isMarkedIgnored = ignoreRules.byId[txId].isIgnored === true;
-            isIgnoredGlobal = false;
-          } else {
-            isMarkedIgnored = tx.isMarkedIgnored || false;
-            isIgnoredGlobal = false;
+          // Set name from first file found if not set
+          if (metaInfo.cliente.nombre === "Cargando..." && data.meta_info?.cliente?.nombre) {
+            metaInfo.cliente.nombre = data.meta_info.cliente.nombre;
           }
-
-          const originalValor = tx.valor;
-          let valor = tx.valor;
-
-          // Only flip the sign when there's an explicit flip rule
-          // Otherwise, preserve the original value from the AI processing
-          const hasFlipRule = descriptionRule || flipRules.byId[txId];
-          if (hasFlipRule && isMarkedPositive) {
-            valor = Math.abs(originalValor);
-          } else if (hasFlipRule && !isMarkedPositive) {
-            valor = -Math.abs(originalValor);
-          }
-          // If no flip rule, keep the original value as-is
-
-          return {
-            ...tx,
-            id: txId,
-            originalDescription, // Keep the original for future edits
-            descripcion: description,
-            banco: bankName,
-            tipo_cuenta: accountType,
-            categoryId,
-            categoryName,
-            valor,
-            originalValor,
-            isMarkedPositive,
-            isPositiveGlobal,
-            isMarkedIgnored,
-            isIgnoredGlobal,
-            ignored: isMarkedIgnored
-          };
-        });
-
-        allTransactions = [...allTransactions, ...transactionsWithSource];
-
-        // Aggregate totals
-        metaInfo.resumen.saldo_actual += data.meta_info?.resumen?.saldo_actual || 0;
-
-        // Use earliest date as "desde"
-        if (data.meta_info?.cuenta?.desde < metaInfo.cuenta.desde) {
-          metaInfo.cuenta.desde = data.meta_info.cuenta.desde;
+        } catch (err) {
+          console.error(`Error reading ${filePath}:`, err);
         }
+      };
 
-        // Set name from first file found if not set
-        if (metaInfo.cliente.nombre === "Cargando..." && data.meta_info?.cliente?.nombre) {
-          metaInfo.cliente.nombre = data.meta_info.cliente.nombre;
+      // Iterate through everything in processedDir
+      const entries = fs.readdirSync(processedDir, { withFileTypes: true });
+
+      entries.forEach(entry => {
+        if (entry.isDirectory()) {
+          const bankPath = path.join(processedDir, entry.name);
+          const bankFiles = fs.readdirSync(bankPath).filter(f => f.endsWith('.json'));
+          bankFiles.forEach(file => processFile(path.join(bankPath, file), entry.name));
+        } else if (entry.isFile() && entry.name.endsWith('.json')) {
+          // Handle legacy files in root
+          processFile(path.join(processedDir, entry.name));
         }
-      } catch (err) {
-        console.error(`Error reading ${file}:`, err);
-      }
-    });
+      });
 
-    // Recalculate global totals based on processed transactions
-    // This ensures rules (sign-flip, ignored) are reflected in the totals
-    metaInfo.resumen.total_abonos = 0;
-    metaInfo.resumen.total_cargos = 0;
+      // Recalculate global totals based on processed transactions
+      // This ensures rules (sign-flip, ignored) are reflected in the totals
+      metaInfo.resumen.total_abonos = 0;
+      metaInfo.resumen.total_cargos = 0;
 
-    allTransactions.forEach(tx => {
-      // Adjust balance based on changes or ignores
-      const delta = (tx.ignored ? 0 : tx.valor) - tx.originalValor;
-      metaInfo.resumen.saldo_actual += delta;
+      allTransactions.forEach(tx => {
+        // Adjust balance based on changes or ignores
+        const delta = (tx.ignored ? 0 : tx.valor) - tx.originalValor;
+        metaInfo.resumen.saldo_actual += delta;
 
-      if (!tx.ignored) {
-        const isCredit = tx.tipo_cuenta === 'credit';
-        if (isCredit) {
-          if (tx.valor < 0) {
-            metaInfo.resumen.total_cargos += Math.abs(tx.valor);
-          }
-        } else {
-          if (tx.valor > 0) {
-            metaInfo.resumen.total_abonos += tx.valor;
+        if (!tx.ignored) {
+          const isCredit = tx.tipo_cuenta === 'credit';
+          if (isCredit) {
+            if (tx.valor < 0) {
+              metaInfo.resumen.total_cargos += Math.abs(tx.valor);
+            }
           } else {
-            metaInfo.resumen.total_cargos += Math.abs(tx.valor);
+            if (tx.valor > 0) {
+              metaInfo.resumen.total_abonos += tx.valor;
+            } else {
+              metaInfo.resumen.total_cargos += Math.abs(tx.valor);
+            }
           }
         }
-      }
-    });
+      });
+    }
+
+    return (
+      <div className="min-h-screen bg-zinc-50 dark:bg-black p-4 md:p-8 font-sans">
+        <FinancialDashboard
+          transactions={allTransactions}
+          metaInfo={metaInfo}
+        />
+      </div>
+    );
   }
-
-  return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black p-4 md:p-8 font-sans">
-      <FinancialDashboard
-        transactions={allTransactions}
-        metaInfo={metaInfo}
-      />
-    </div>
-  );
 }
 

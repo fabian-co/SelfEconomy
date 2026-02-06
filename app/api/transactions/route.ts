@@ -15,13 +15,29 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Search for the transaction in all processed JSON files
-    const files = fs.readdirSync(PROCESSED_DIR).filter(f => f.endsWith('.json'));
+    // Helper to get all files recursively
+    const getAllFiles = (dir: string): string[] => {
+      let results: string[] = [];
+      const list = fs.readdirSync(dir);
+      list.forEach(file => {
+        const filePath = path.join(dir, file);
+        const stat = fs.statSync(filePath);
+        if (stat.isDirectory()) {
+          results = results.concat(getAllFiles(filePath));
+        } else if (file.endsWith('.json')) {
+          results.push(filePath);
+        }
+      });
+      return results;
+    };
+
+    const allFiles = getAllFiles(PROCESSED_DIR);
     let found = false;
     let updatedFile = '';
 
-    for (const file of files) {
-      const filePath = path.join(PROCESSED_DIR, file);
+    for (const filePath of allFiles) {
+      if (!filePath.endsWith('.json')) continue;
+
       const content = fs.readFileSync(filePath, 'utf-8');
       const data = JSON.parse(content);
 
@@ -42,7 +58,7 @@ export async function PUT(request: NextRequest) {
         fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 
         found = true;
-        updatedFile = file;
+        updatedFile = path.basename(filePath);
         break;
       }
     }
