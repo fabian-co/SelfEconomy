@@ -1,7 +1,12 @@
 import { formatCurrency } from "@/lib/utils";
-import { ArrowDownIcon, ArrowUpIcon, Tag } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, Tag, Trash } from "lucide-react";
 import { TransactionEditor } from "./TransactionEditor";
 import { IconMap } from "./category-manager/constants";
+import { useState } from "react";
+import { DeleteTransactionDialog } from "./DeleteTransactionDialog";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 
 interface TransactionItemProps {
   description: string;
@@ -42,8 +47,33 @@ export function TransactionItem({
   isIgnoredGlobal,
   onUpdate
 }: TransactionItemProps) {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const router = useRouter();
+
   const isIncome = value >= 0;
   const isNuBank = banco?.toLowerCase().includes('nu');
+
+  const handleDelete = async () => {
+    if (!transactionId) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/transactions?transactionId=${transactionId}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) throw new Error("Failed to delete");
+
+      toast.success("Transacción eliminada");
+      setIsDeleteDialogOpen(false);
+      router.refresh();
+    } catch (error) {
+      toast.error("Error al eliminar la transacción");
+      console.error(error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const IconComp = (categoryIcon && IconMap[categoryIcon]) || Tag;
 
@@ -92,22 +122,39 @@ export function TransactionItem({
         <div id="transaction-item-value" className={`font-semibold ${ignored ? 'text-zinc-400 line-through' : (isIncome ? 'text-emerald-600 dark:text-emerald-500' : 'text-zinc-900 dark:text-zinc-100')}`}>
           {isIncome ? '+' : ''}{formatCurrency(value)}
         </div>
-        <TransactionEditor
-          description={description}
-          originalDescription={originalDescription}
-          categoryId={categoryId}
-          categoryName={categoryName}
-          transactionId={transactionId}
-          currentAmount={value}
-          originalAmount={originalValor ?? value}
-          bankName={banco}
-          isMarkedPositive={isMarkedPositive}
-          isPositiveGlobal={isPositiveGlobal}
-          isIgnored={isIgnored}
-          isIgnoredGlobal={isIgnoredGlobal}
-          onSave={onUpdate}
-        />
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20"
+            onClick={() => setIsDeleteDialogOpen(true)}
+          >
+            <Trash className="h-4 w-4" />
+          </Button>
+          <TransactionEditor
+            description={description}
+            originalDescription={originalDescription}
+            categoryId={categoryId}
+            categoryName={categoryName}
+            transactionId={transactionId}
+            currentAmount={value}
+            originalAmount={originalValor ?? value}
+            bankName={banco}
+            isMarkedPositive={isMarkedPositive}
+            isPositiveGlobal={isPositiveGlobal}
+            isIgnored={isIgnored}
+            isIgnoredGlobal={isIgnoredGlobal}
+            onSave={onUpdate}
+          />
+        </div>
       </div>
+
+      <DeleteTransactionDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDelete}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }

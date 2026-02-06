@@ -17,8 +17,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { SearchInput } from "@/components/ui/SearchInput";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { IconMap } from "./category-manager/constants";
-import { Plus, ChevronDown, Tag, X, TrendingUp } from "lucide-react";
+import { Plus, ChevronDown, Tag, X, TrendingUp, Trash } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
+import { DeleteTransactionDialog } from "./DeleteTransactionDialog";
 
 interface TransactionEditorProps {
   description: string;
@@ -86,6 +87,8 @@ export function TransactionEditor({
   const [newColor, setNewColor] = useState("#3f3f46");
   const [catSearch, setCatSearch] = useState("");
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
   // Sync state when props change or dialog opens
@@ -184,6 +187,28 @@ export function TransactionEditor({
       console.error(error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!transactionId) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/transactions?transactionId=${transactionId}`, {
+        method: 'DELETE'
+      });
+
+      if (!res.ok) throw new Error("Failed to delete");
+
+      toast.success("Transacción eliminada");
+      setOpen(false);
+      setIsDeleteDialogOpen(false);
+      router.refresh();
+    } catch (error) {
+      toast.error("Error al eliminar la transacción");
+      console.error(error);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -452,20 +477,38 @@ export function TransactionEditor({
             )}
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="ghost" onClick={() => setOpen(false)} className="rounded-xl">
-              Cancelar
-            </Button>
+          <div className="flex justify-between items-center pt-2">
             <Button
-              onClick={handleSave}
-              disabled={isSubmitting || !editDescription.trim()}
-              className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 min-w-[100px]"
+              variant="ghost"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl"
             >
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
+              <Trash className="h-4 w-4 mr-2" />
+              Eliminar
             </Button>
+
+            <div className="flex gap-3">
+              <Button variant="ghost" onClick={() => setOpen(false)} className="rounded-xl">
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={isSubmitting || !editDescription.trim()}
+                className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 min-w-[100px]"
+              >
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Guardar"}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
+
+      <DeleteTransactionDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleDelete}
+        isDeleting={isDeleting}
+      />
     </Dialog>
   );
 }

@@ -84,3 +84,76 @@ export async function PUT(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const transactionId = searchParams.get('transactionId');
+
+    if (!transactionId) {
+      return NextResponse.json(
+        { error: 'Missing transactionId' },
+        { status: 400 }
+      );
+    }
+
+    // Helper to get all files recursively
+    const getAllFiles = (dir: string): string[] => {
+      let results: string[] = [];
+      if (!fs.existsSync(dir)) return [];
+
+      const list = fs.readdirSync(dir);
+      list.forEach(file => {
+        const filePath = path.join(dir, file);
+        const stat = fs.statSync(filePath);
+        if (stat.isDirectory()) {
+          results = results.concat(getAllFiles(filePath));
+        } else if (file.endsWith('.json')) {
+          results.push(filePath);
+        }
+      });
+      return results;
+    };
+
+    const allFiles = getAllFiles(PROCESSED_DIR);
+    let found = false;
+    let updatedFile = '';
+
+    for (const filePath of allFiles) {
+      const content = fs.readFileSync(filePath, 'utf-8');
+      const data = JSON.parse(content);
+
+      if (!data.transacciones) continue;
+
+      const initialLength = data.transacciones.length;
+      data.transacciones = data.transacciones.filter((tx: any) => tx.id !== transactionId);
+
+      if (data.transacciones.length < initialLength) {
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+        found = true;
+        updatedFile = path.basename(filePath);
+        break;
+      }
+    }
+
+    if (!found) {
+      return NextResponse.json(
+        { error: 'Transaction not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Transaction deleted from ${updatedFile}`,
+      transactionId
+    });
+
+  } catch (error: any) {
+    console.error('Error deleting transaction:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to delete transaction' },
+      { status: 500 }
+    );
+  }
+}
