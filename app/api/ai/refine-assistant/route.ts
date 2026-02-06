@@ -34,32 +34,32 @@ CONTEXTO:
 Texto del extracto (muestra):
 ${text.substring(0, 4000)}`,
       tools: {
-        add_ignore_rule: tool({
+        add_ignore_rule: (tool as any)({
           description: 'Agrega un patrón (regex simple o palabra) a la lista de ignorados.',
           parameters: z.object({
             pattern: z.string().describe('El patrón de descripción a ignorar (ej: "Comisión por cambio")'),
-          }),
+          }) as any,
         }),
-        add_flip_rule: tool({
+        add_flip_rule: (tool as any)({
           description: 'Agrega un patrón para invertir el signo de la transacción (de negativo a positivo).',
           parameters: z.object({
             pattern: z.string().describe('El patrón de descripción a invertir (ej: "Abono", "Pago")'),
-          }),
+          }) as any,
         }),
-        update_extraction_regex: tool({
+        update_extraction_regex: (tool as any)({
           description: 'Actualiza el regex principal de extracción. Solo úsalo si el actual no captura nada o captura mal las columnas.',
           parameters: z.object({
             new_regex: z.string().describe('El nuevo regex con grupos de captura para fecha, descripción y valor.'),
             date_format: z.string().optional().describe('Nuevo formato de fecha si cambió.'),
-          }),
+          }) as any,
         }),
-        physical_cleanup: tool({
+        physical_cleanup: (tool as any)({
           description: 'Aplica una limpieza de IA al texto raw si hay demasiado ruido que confunde al procesador.',
           parameters: z.object({
             instruction: z.string().describe('Instrucción específica para la limpieza del texto raw.'),
-          }),
+          }) as any,
         }),
-        edit_transaction: tool({
+        edit_transaction: (tool as any)({
           description: 'Edita una transacción específica que ya fue extraída pero tiene errores en sus campos.',
           parameters: z.object({
             tx_id: z.string().describe('El ID de la transacción a editar.'),
@@ -69,14 +69,14 @@ ${text.substring(0, 4000)}`,
               valor: z.number().optional(),
             }),
             motive: z.string().describe('Razón del cambio (ej: "Monto incorrecto según usuario")'),
-          }),
+          }) as any,
         }),
-        delete_transaction: tool({
+        delete_transaction: (tool as any)({
           description: 'Elimina una transacción específica de la lista sugerida.',
           parameters: z.object({
             tx_id: z.string().describe('El ID de la transacción a eliminar.'),
             motive: z.string().describe('Razón de la eliminación.'),
-          }),
+          }) as any,
         }),
       },
     });

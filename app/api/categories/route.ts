@@ -1,49 +1,41 @@
 import { NextResponse } from 'next/server';
 import { CategoryService } from '@/lib/services/category.service';
+import { createHandler } from '@/lib/api-handler';
+import { createCategorySchema, updateCategorySchema } from '@/lib/validators/category.schema';
 
-export async function GET() {
-  try {
-    const categories = await CategoryService.getAllCategories();
-    return NextResponse.json(categories);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to read categories' }, { status: 500 });
+export const GET = createHandler(async () => {
+  const categories = await CategoryService.getAllCategories();
+  return NextResponse.json(categories);
+});
+
+export const POST = createHandler(async (req: Request) => {
+  const body = await req.json();
+  const validatedData = createCategorySchema.parse(body);
+  const newCategory = await CategoryService.addCustomCategory(validatedData);
+  return NextResponse.json(newCategory);
+});
+
+export const PUT = createHandler(async (req: Request) => {
+  const body = await req.json();
+  const validatedData = updateCategorySchema.parse(body);
+  const updated = await CategoryService.updateCustomCategory(validatedData);
+  return NextResponse.json(updated);
+});
+
+export const DELETE = createHandler(async (req: Request) => {
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    throw new Error('ID is required'); // Will be caught by generic handler, or we can throw AppError
   }
-}
 
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const newCategory = await CategoryService.addCustomCategory(body);
-    return NextResponse.json(newCategory);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message || 'Failed to add category' }, { status: 500 });
-  }
-}
+  // Better to use AppError explicitly if we want 400, but the service throws 404 if not found
+  // The service might not throw for missing ID if we don't check here, but the service check exists.
+  // Actually, let's let the service handle it or check here.
+  // Service has: if (!filtered.length === categories.length) throw new AppError('Category not found', 404);
 
-export async function PUT(request: Request) {
-  try {
-    const body = await request.json();
-    const updated = await CategoryService.updateCustomCategory(body);
-    return NextResponse.json(updated);
-  } catch (error: any) {
-    const status = error.message.includes('not found') ? 404 : 500;
-    return NextResponse.json({ error: error.message || 'Failed to update category' }, { status });
-  }
-}
+  await CategoryService.deleteCustomCategory(id);
+  return NextResponse.json({ message: 'Category deleted successfully' });
+});
 
-export async function DELETE(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json({ error: 'ID is required' }, { status: 400 });
-    }
-
-    await CategoryService.deleteCustomCategory(id);
-    return NextResponse.json({ message: 'Category deleted successfully' });
-  } catch (error: any) {
-    const status = error.message.includes('not found') ? 404 : 500;
-    return NextResponse.json({ error: error.message || 'Failed to delete category' }, { status });
-  }
-}

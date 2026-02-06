@@ -82,9 +82,9 @@ export function TransactionEditor({
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newIcon, setNewIcon] = useState("Tag");
-  const [newColor, setNewColor] = useState("#3f3f46");
+  // const [newName, setNewName] = useState(""); // Removed
+  // const [newIcon, setNewIcon] = useState("Tag"); // Removed
+  // const [newColor, setNewColor] = useState("#3f3f46"); // Removed
   const [catSearch, setCatSearch] = useState("");
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -111,12 +111,33 @@ export function TransactionEditor({
     }
   }, [open]);
 
+  const handleAddNewCategory = async (name: string, icon: string, color: string) => {
+    try {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, icon, color }),
+      });
+      if (!res.ok) throw new Error("Failed to create category");
+      const added = await res.json();
+      setCategories(prev => [...prev, added]);
+      setSelectedCategoryId(added.id);
+      setIsAddingCategory(false);
+      toast.success(`Categoría "${added.name}" creada`);
+    } catch (error) {
+      toast.error("No se pudo crear la categoría");
+      throw error; // Propagate error so AddCategoryForm can handle it if needed
+    }
+  };
+
+
+
   const handleValueChange = (value: string) => {
     if (value === "__new__") {
       setIsAddingCategory(true);
-      setNewName("");
-      setNewIcon("Tag");
-      setNewColor("#3f3f46");
+      // setNewName(""); // Removed
+      // setNewIcon("Tag"); // Removed
+      // setNewColor("#3f3f46"); // Removed
     } else {
       setIsAddingCategory(false);
       setSelectedCategoryId(value);
@@ -131,29 +152,8 @@ export function TransactionEditor({
       let finalCategoryId = selectedCategoryId;
       let finalCategoryName = "";
 
-      if (isAddingCategory) {
-        if (!newName.trim()) {
-          toast.error("El nombre de la categoría es obligatorio");
-          setIsSubmitting(false);
-          return;
-        }
-
-        const res = await fetch("/api/categories", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: newName, icon: newIcon, color: newColor }),
-        });
-
-        if (!res.ok) throw new Error("Failed to create category");
-        const added = await res.json();
-        finalCategoryId = added.id;
-        finalCategoryName = added.name;
-        // Update local list for future use
-        setCategories(prev => [...prev, added]);
-      } else {
-        const selectedCategory = categories.find(c => c.id === selectedCategoryId);
-        finalCategoryName = selectedCategory?.name || "";
-      }
+      const selectedCategory = categories.find(c => c.id === selectedCategoryId);
+      finalCategoryName = selectedCategory?.name || "";
 
       // Detect if sign changed
       const originalIsPositive = currentAmount >= 0;
@@ -259,12 +259,7 @@ export function TransactionEditor({
                 <X className="h-3 w-3 text-zinc-500" />
               </Button>
               <AddCategoryForm
-                name={newName}
-                setName={setNewName}
-                icon={newIcon}
-                setIcon={setNewIcon}
-                color={newColor}
-                setColor={setNewColor}
+                onAdd={handleAddNewCategory}
               />
             </div>
           ) : (
@@ -345,9 +340,9 @@ export function TransactionEditor({
                         className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/10 transition-colors mt-1 border-t border-zinc-100 dark:border-zinc-800 pt-2"
                         onClick={() => {
                           setIsAddingCategory(true);
-                          setNewName("");
-                          setNewIcon("Tag");
-                          setNewColor("#3f3f46");
+                          // setNewName(""); // Removed
+                          // setNewIcon("Tag"); // Removed
+                          // setNewColor("#3f3f46"); // Removed
                           setPopoverOpen(false);
                           setCatSearch("");
                         }}

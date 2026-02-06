@@ -1,5 +1,6 @@
 import path from 'path';
 import { JsonStorageService } from './json-storage.service';
+import { AppError } from '../exceptions/api-error';
 
 export interface Category {
   id: string;
@@ -19,7 +20,7 @@ export class CategoryService {
   }
 
   static async addCustomCategory(category: Partial<Category>): Promise<Category> {
-    if (!category.name) throw new Error('Category name is required');
+    if (!category.name) throw new AppError('Category name is required', 400);
 
     const id = category.id || category.name.toLowerCase().replace(/\s+/g, '_');
     const newCategory: Category = {
@@ -42,7 +43,7 @@ export class CategoryService {
   }
 
   static async updateCustomCategory(updated: Partial<Category>): Promise<Category> {
-    if (!updated.id) throw new Error('Category ID is required');
+    if (!updated.id) throw new AppError('Category ID is required', 400);
 
     let result: Category | undefined;
 
@@ -50,7 +51,7 @@ export class CategoryService {
       this.CUSTOM_PATH,
       (categories) => {
         const index = categories.findIndex(c => c.id === updated.id);
-        if (index === -1) throw new Error('Category not found in custom categories');
+        if (index === -1) throw new AppError('Category not found in custom categories', 404);
 
         categories[index] = { ...categories[index], ...updated } as Category;
         result = categories[index];
@@ -67,7 +68,7 @@ export class CategoryService {
       this.CUSTOM_PATH,
       (categories) => {
         const filtered = categories.filter(c => c.id !== id);
-        if (filtered.length === categories.length) throw new Error('Category not found');
+        if (filtered.length === categories.length) throw new AppError('Category not found', 404);
         return filtered;
       },
       []
