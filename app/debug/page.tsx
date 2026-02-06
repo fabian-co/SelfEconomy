@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Loader2Icon, UploadIcon, FileTextIcon, CheckCircleIcon, XCircleIcon, TableIcon, PlayIcon, ExternalLinkIcon, BrainIcon, SparklesIcon, CircleIcon, CircleDotIcon } from "lucide-react";
+import { Loader2Icon, UploadIcon, FileTextIcon, CheckCircleIcon, XCircleIcon, XIcon, TableIcon, PlayIcon, ExternalLinkIcon, BrainIcon, SparklesIcon, CircleIcon, CircleDotIcon } from "lucide-react";
 
 interface ExtractResult {
   success?: boolean;
@@ -43,13 +43,39 @@ interface LLMResult {
     outputCost: number;
     totalCost: number;
   };
+  template?: {
+    entity: string;
+    account_type: string;
+    transaction_regex: string;
+    group_mapping: {
+      date: number;
+      description: number;
+      value: number;
+    };
+    date_format: string;
+    decimal_separator: string;
+    thousand_separator: string;
+    rules: {
+      default_negative: boolean;
+      positive_patterns: string[];
+      ignore_patterns: string[];
+    };
+  };
+  extractedWithRegex?: Array<{
+    date: string;
+    description: string;
+    value: string;
+  }>;
 }
 
 interface StepStatus {
   step: string;
-  status: 'pending' | 'running' | 'done' | 'error';
+  status: 'pending' | 'running' | 'done' | 'error' | 'cancelled';
   message?: string;
   duration?: number;
+  currentPage?: number;
+  totalPages?: number;
+  progress?: number;
 }
 
 type TabType = 'extraction' | 'llm';
@@ -58,8 +84,11 @@ const STEP_LABELS: { [key: string]: string } = {
   upload: '📁 Subir archivo',
   password: '🔓 Quitar protección',
   extract: '📄 Extraer texto',
+  split: '📑 Dividir en páginas',
   llm: '🤖 Analizar con IA',
+  page_processing: '📄 Procesando páginas',
   csv: '📊 Generar CSV',
+  cancelled: '⛔ Cancelado',
 };
 
 export default function DebugPage() {
@@ -70,6 +99,9 @@ export default function DebugPage() {
   const [extractResult, setExtractResult] = useState<ExtractResult | null>(null);
   const [llmResult, setLLMResult] = useState<LLMResult | null>(null);
   const [steps, setSteps] = useState<StepStatus[]>([]);
+  const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [pageProgress, setPageProgress] = useState<{ current: number; total: number; progress: number } | null>(null);
+  const [isCancelled, setIsCancelled] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -106,12 +138,18 @@ export default function DebugPage() {
 
   const runLLMExtraction = async () => {
     if (!file) return;
+
+    const controller = new AbortController();
+    setAbortController(controller);
     setIsProcessing(true);
     setLLMResult(null);
+    setPageProgress(null);
+    setIsCancelled(false);
     setSteps([
       { step: 'upload', status: 'pending' },
       { step: 'password', status: 'pending' },
       { step: 'extract', status: 'pending' },
+      { step: 'split', status: 'pending' },
       { step: 'llm', status: 'pending' },
       { step: 'csv', status: 'pending' },
     ]);
@@ -123,7 +161,8 @@ export default function DebugPage() {
 
       const response = await fetch('/api/debug/llm-extract', {
         method: 'POST',
-        body: formData
+        body: formData,
+        signal: controller.signal
       });
 
       const reader = response.body?.getReader();
@@ -144,8 +183,23 @@ export default function DebugPage() {
 
             if (data.step === 'complete' && data.result) {
               setLLMResult(data.result);
+              setPageProgress(null);
             } else if (data.step === 'error') {
               setLLMResult({ success: false, error: data.message });
+            } else if (data.step === 'cancelled') {
+              setIsCancelled(true);
+              setSteps(prev => [...prev, { step: 'cancelled', status: 'cancelled', message: data.message }]);
+            } else if (data.step === 'page_processing') {
+              // Update page progress
+              setPageProgress({
+                current: data.currentPage,
+                total: data.totalPages,
+                progress: data.progress
+              });
+              // Update steps with page info
+              setSteps(prev => prev.map(s =>
+                s.step === 'llm' ? { ...s, status: 'running', message: data.message } : s
+              ));
             } else {
               setSteps(prev => prev.map(s =>
                 s.step === data.step ? { ...s, ...data } : s
@@ -157,9 +211,21 @@ export default function DebugPage() {
         }
       }
     } catch (error: any) {
-      setLLMResult({ success: false, error: error.message });
+      if (error.name === 'AbortError') {
+        setIsCancelled(true);
+      } else {
+        setLLMResult({ success: false, error: error.message });
+      }
     } finally {
       setIsProcessing(false);
+      setAbortController(null);
+    }
+  };
+
+  const handleCancel = () => {
+    if (abortController) {
+      abortController.abort();
+      setIsCancelled(true);
     }
   };
 
@@ -181,6 +247,7 @@ export default function DebugPage() {
       case 'running': return <Loader2Icon className="h-5 w-5 text-purple-400 animate-spin" />;
       case 'done': return <CheckCircleIcon className="h-5 w-5 text-emerald-400" />;
       case 'error': return <XCircleIcon className="h-5 w-5 text-red-400" />;
+      case 'cancelled': return <XCircleIcon className="h-5 w-5 text-yellow-400" />;
     }
   };
 
@@ -343,17 +410,52 @@ export default function DebugPage() {
                 <SparklesIcon className="h-5 w-5 text-purple-400" />
                 2. Analizar con IA
               </h2>
-              <button
-                onClick={runLLMExtraction}
-                disabled={!file || isProcessing}
-                className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-500 hover:via-pink-500 hover:to-rose-500 disabled:from-zinc-700 disabled:via-zinc-700 disabled:to-zinc-700 disabled:text-zinc-500 text-white font-semibold py-4 px-6 rounded-xl transition-all text-lg"
-              >
-                {isProcessing ? (
-                  <><Loader2Icon className="h-6 w-6 animate-spin" /> Analizando...</>
-                ) : (
-                  <><BrainIcon className="h-6 w-6" /> Extraer con IA (Gemini)</>
+              <div className="flex gap-3">
+                <button
+                  onClick={runLLMExtraction}
+                  disabled={!file || isProcessing}
+                  className="flex-1 flex items-center justify-center gap-3 bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-500 hover:via-pink-500 hover:to-rose-500 disabled:from-zinc-700 disabled:via-zinc-700 disabled:to-zinc-700 disabled:text-zinc-500 text-white font-semibold py-4 px-6 rounded-xl transition-all text-lg"
+                >
+                  {isProcessing ? (
+                    <><Loader2Icon className="h-6 w-6 animate-spin" /> Analizando...</>
+                  ) : (
+                    <><BrainIcon className="h-6 w-6" /> Extraer con IA (Gemini)</>
+                  )}
+                </button>
+                {isProcessing && (
+                  <button
+                    onClick={handleCancel}
+                    className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-500 text-white font-semibold py-4 px-6 rounded-xl transition-all"
+                  >
+                    <XIcon className="h-5 w-5" />
+                    Cancelar
+                  </button>
                 )}
-              </button>
+              </div>
+
+              {/* Page Progress Bar */}
+              {pageProgress && (
+                <div className="mt-4">
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-zinc-400">Procesando página {pageProgress.current} de {pageProgress.total}</span>
+                    <span className="text-purple-400 font-semibold">{pageProgress.progress}%</span>
+                  </div>
+                  <div className="w-full bg-zinc-800 rounded-full h-3 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300 ease-out"
+                      style={{ width: `${pageProgress.progress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Cancelled Message */}
+              {isCancelled && !isProcessing && (
+                <div className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 flex items-center gap-3">
+                  <XCircleIcon className="h-5 w-5 text-yellow-400" />
+                  <span className="text-yellow-400">Proceso cancelado por el usuario</span>
+                </div>
+              )}
             </div>
 
             {/* Progress Checklist */}
@@ -500,6 +602,53 @@ export default function DebugPage() {
                         <pre className="bg-zinc-950 border border-purple-700/30 rounded-xl p-4 text-xs text-zinc-300 overflow-auto max-h-[200px] whitespace-pre-wrap font-mono">
                           {llmResult.csv}
                         </pre>
+                      </div>
+                    )}
+
+                    {/* Template Section */}
+                    {llmResult.template && (
+                      <div className="mt-6 grid grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="text-sm font-semibold text-cyan-300 mb-3 flex items-center gap-2">
+                            🛠️ Template Generado (Ingeniería Inversa)
+                          </h4>
+                          <pre className="bg-zinc-950 border border-cyan-700/30 rounded-xl p-4 text-xs text-zinc-300 overflow-auto max-h-[400px] whitespace-pre-wrap font-mono">
+                            {JSON.stringify(llmResult.template, null, 2)}
+                          </pre>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-emerald-300 mb-3 flex items-center gap-2">
+                            📋 Transacciones Extraídas con Regex ({llmResult.extractedWithRegex?.length || 0})
+                          </h4>
+                          {llmResult.extractedWithRegex && llmResult.extractedWithRegex.length > 0 ? (
+                            <div className="overflow-auto max-h-[400px] rounded-xl border border-emerald-700/30">
+                              <table className="w-full text-xs">
+                                <thead className="bg-zinc-800 sticky top-0">
+                                  <tr>
+                                    <th className="text-left p-2 text-zinc-400">#</th>
+                                    <th className="text-left p-2 text-zinc-400">Fecha</th>
+                                    <th className="text-left p-2 text-zinc-400">Descripción</th>
+                                    <th className="text-right p-2 text-zinc-400">Valor</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {llmResult.extractedWithRegex.map((tx, i) => (
+                                    <tr key={i} className="border-t border-zinc-800 hover:bg-zinc-800/50">
+                                      <td className="p-2 text-zinc-500">{i + 1}</td>
+                                      <td className="p-2 text-zinc-300 font-mono">{tx.date}</td>
+                                      <td className="p-2 text-zinc-300">{tx.description}</td>
+                                      <td className="p-2 text-right text-zinc-300 font-mono">{tx.value}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          ) : (
+                            <div className="bg-zinc-950 border border-zinc-700/30 rounded-xl p-4 text-xs text-zinc-500">
+                              No se encontraron coincidencias con el regex
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </>
