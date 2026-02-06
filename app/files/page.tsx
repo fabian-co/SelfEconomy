@@ -157,6 +157,7 @@ export default function FilesPage() {
                   files={bank.files}
                   onDeleteFile={handleDelete}
                   onEditFile={handleEditFile}
+                  onRefresh={fetchFiles}
                 />
               ))
             )}

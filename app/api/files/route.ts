@@ -136,13 +136,25 @@ export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const name = searchParams.get('name');
+    const type = searchParams.get('type'); // 'file' or 'folder'
 
     if (!name) {
       return NextResponse.json({ error: 'Missing filename' }, { status: 400 });
     }
 
     const filePath = path.join(DATA_DIR, name);
-    await fs.unlink(filePath);
+
+    // Safety check: ensure we are within DATA_DIR
+    const relative = path.relative(DATA_DIR, filePath);
+    if (relative.startsWith('..') || path.isAbsolute(relative)) {
+      return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+    }
+
+    if (type === 'folder') {
+      await fs.rm(filePath, { recursive: true, force: true });
+    } else {
+      await fs.unlink(filePath);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
