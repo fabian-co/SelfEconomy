@@ -48,6 +48,7 @@ export async function GET(request: Request) {
 
       let bank = null;
       let accountType = null;
+      let dateRange = null;
 
       if (filePath.toLowerCase().endsWith('.json')) {
         try {
@@ -56,6 +57,19 @@ export async function GET(request: Request) {
           if (data.meta_info) {
             bank = data.meta_info.banco || null;
             accountType = data.meta_info.tipo_cuenta || null;
+          }
+          // Extract date range from transactions
+          if (data.transacciones && Array.isArray(data.transacciones) && data.transacciones.length > 0) {
+            const dates = data.transacciones
+              .map((t: { fecha?: string }) => t.fecha)
+              .filter((d: unknown): d is string => typeof d === 'string' && d.length > 0)
+              .sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime());
+
+            if (dates.length > 0) {
+              const firstDate = dates[0];
+              const lastDate = dates[dates.length - 1];
+              dateRange = `${firstDate} - ${lastDate}`;
+            }
           }
         } catch (e) {
           console.warn(`Could not read metadata for ${filePath}`, e);
@@ -67,7 +81,8 @@ export async function GET(request: Request) {
         size: stats.size,
         updatedAt: stats.mtime,
         bank,
-        accountType
+        accountType,
+        dateRange
       };
     }));
 

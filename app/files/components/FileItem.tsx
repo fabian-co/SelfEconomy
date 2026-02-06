@@ -8,6 +8,7 @@ interface FileItemProps {
   name: string;
   size: number;
   updatedAt: string;
+  dateRange?: string | null;
   onRename: (newName: string) => void;
   onDelete: () => void;
   onProcess?: (password?: string) => Promise<void>;
@@ -16,7 +17,7 @@ interface FileItemProps {
   accountType?: string | null;
 }
 
-export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess, onEdit, bank, accountType }: FileItemProps) {
+export function FileItem({ name, size, updatedAt, dateRange, onRename, onDelete, onProcess, onEdit, bank, accountType }: FileItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(name);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -121,7 +122,7 @@ export function FileItem({ name, size, updatedAt, onRename, onDelete, onProcess,
           <div id="file-item-size-details" className="flex items-center gap-2 text-xs text-zinc-500 mt-1">
             <span>{formatSize(size)}</span>
             <span>•</span>
-            <span>{new Date(updatedAt).toLocaleDateString()}</span>
+            <span>{dateRange || new Date(updatedAt).toLocaleDateString()}</span>
             {bank && accountType && (
               <span id="file-item-badge" className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 capitalize">
                 {bank} - {accountType}

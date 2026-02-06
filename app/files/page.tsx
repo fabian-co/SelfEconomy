@@ -14,6 +14,7 @@ interface FileData {
   updatedAt: string;
   bank?: string | null;
   accountType?: string | null;
+  dateRange?: string | null;
 }
 
 export default function FilesPage() {
@@ -178,6 +179,7 @@ export default function FilesPage() {
                   name={file.name}
                   size={file.size}
                   updatedAt={file.updatedAt}
+                  dateRange={file.dateRange}
                   onRename={(newName) => handleRename(file.name, newName)}
                   onDelete={() => handleDelete(file.name)}
                   onProcess={(pwd) => handleProcess(file.name, pwd)}

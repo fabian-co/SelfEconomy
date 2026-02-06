@@ -144,16 +144,20 @@ export function TransactionEditor({
         finalCategoryName = selectedCategory?.name || "";
       }
 
+      // Only include markAsPositive if it changed from the original value
+      const positiveChanged = markAsPositive !== (isMarkedPositive || false);
+      // Only include markAsIgnored if it changed from the original value
+      const ignoredChanged = markAsIgnored !== (isIgnored || false);
+
       await onSave({
         originalDescription: originalDescription || description,
         description: editDescription,
         categoryId: finalCategoryId,
         categoryName: finalCategoryName,
         applyGlobally,
-        markAsPositive,
-        applyPositiveGlobally,
-        markAsIgnored,
-        applyIgnoreGlobally,
+        // Only send these fields if they actually changed
+        ...(positiveChanged && { markAsPositive, applyPositiveGlobally }),
+        ...(ignoredChanged && { markAsIgnored, applyIgnoreGlobally }),
         transactionId
       });
 
