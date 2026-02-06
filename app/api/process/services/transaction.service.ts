@@ -157,12 +157,17 @@ export class TransactionService {
     return data;
   }
 
-  static async recalculateAndSave(filePath: string, outputName: string, paymentKeywords: string[]) {
+  static async recalculateAndSave(filePath: string, outputName: string, paymentKeywords: string[], newBankName?: string) {
     const fileName = outputName || path.basename(filePath, path.extname(filePath));
     const jsonPath = path.join(process.cwd(), 'app', 'api', 'extracto', 'processed', `${fileName}.json`);
 
     const content = await fs.promises.readFile(jsonPath, 'utf-8');
     let data = JSON.parse(content);
+
+    // Update bank name if provided
+    if (newBankName) {
+      data.meta_info.banco = newBankName;
+    }
 
     const isBancolombia = data.meta_info.banco === 'Bancolombia';
     if (isBancolombia) data.meta_info.ignore_keywords = paymentKeywords;

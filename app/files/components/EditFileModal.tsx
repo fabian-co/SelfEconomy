@@ -110,7 +110,8 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
           password: editForm.password,
           paymentKeywords: editForm.keywords,
           action: (editForm.sourcePath && !editForm.bank?.toLowerCase().includes('nu')) ? 'process' : 'recalculate_json',
-          outputName: editForm.name // Just the basename
+          outputName: editForm.name, // Just the basename
+          bankName: editForm.name // Sync bank name with file name
         }),
       });
 
@@ -148,14 +149,17 @@ export function EditFileModal({ file, isOpen, onClose, onSuccess }: EditFileModa
         ) : (
           <div className="grid gap-5 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-name" className="text-sm font-semibold">Nombre del Archivo</Label>
+              <Label htmlFor="edit-name" className="text-sm font-semibold">Nombre del Banco</Label>
               <Input
                 id="edit-name"
                 value={editForm.name}
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                placeholder="Ej: Extracto Nu Octubre"
+                placeholder="Ej: Bancolombia, Nu"
                 className="rounded-xl"
               />
+              <p className="text-[10px] text-zinc-400">
+                Este nombre se usará como nombre del archivo y del banco en el JSON.
+              </p>
             </div>
 
             {editForm.sourcePath && editForm.sourcePath.toLowerCase().endsWith('.pdf') && !editForm.bank?.toLowerCase().includes('nu') && (

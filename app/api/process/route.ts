@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     let {
       filePath, password, action, paymentKeywords,
       outputName, bank, accountType, data, templateFileName,
-      feedbackMessage, previousTemplate, sessionId
+      feedbackMessage, previousTemplate, sessionId, bankName
     } = body;
 
     // -- Actions without filePath requirement --
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     }
 
     if (action === 'recalculate_json') {
-      await TransactionService.recalculateAndSave(filePath, outputName, paymentKeywords);
+      await TransactionService.recalculateAndSave(filePath, outputName, paymentKeywords, bankName);
       return NextResponse.json({ success: true, message: 'JSON recalculado' });
     }
 
