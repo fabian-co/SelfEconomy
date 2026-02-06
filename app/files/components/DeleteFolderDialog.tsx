@@ -43,29 +43,31 @@ export function DeleteFolderDialog({ isOpen, onClose, onConfirm, folderName }: D
           <AlertDialogTitle className="text-zinc-900 dark:text-zinc-100">
             ¿Estás seguro de eliminar la carpeta "{folderName}"?
           </AlertDialogTitle>
-          <AlertDialogDescription className="space-y-4 pt-2">
-            <div className="p-4 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 rounded-lg border border-amber-200 dark:border-amber-800/50">
-              <p className="font-medium">Esta carpeta tiene extractos procesados.</p>
-              <p className="text-sm mt-1 opacity-90">
-                Esta acción es irreversible y eliminará permanentemente todos los archivos contenidos.
-              </p>
-            </div>
+          <AlertDialogDescription asChild className="space-y-4 pt-2">
+            <div>
+              <div className="p-4 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 rounded-lg border border-amber-200 dark:border-amber-800/50">
+                <p className="font-medium">Esta carpeta tiene extractos procesados.</p>
+                <p className="text-sm mt-1 opacity-90">
+                  Esta acción es irreversible y eliminará permanentemente todos los archivos contenidos.
+                </p>
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Para confirmar, escribe: <span className="font-mono font-bold select-all">{REQUIRED_TEXT}</span>
-              </label>
-              <input
-                type="text"
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                placeholder={REQUIRED_TEXT}
-                className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all font-mono text-sm"
-                onPaste={(e) => e.preventDefault()}
-                onDrop={(e) => e.preventDefault()}
-                autoComplete="off"
-                data-1p-ignore
-              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Para confirmar, escribe: <span className="font-mono font-bold select-all">{REQUIRED_TEXT}</span>
+                </label>
+                <input
+                  type="text"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder={REQUIRED_TEXT}
+                  className="w-full px-3 py-2 border border-zinc-300 dark:border-zinc-700 rounded-md bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all font-mono text-sm"
+                  onPaste={(e) => e.preventDefault()}
+                  onDrop={(e) => e.preventDefault()}
+                  autoComplete="off"
+                  data-1p-ignore
+                />
+              </div>
             </div>
           </AlertDialogDescription>
         </AlertDialogHeader>
