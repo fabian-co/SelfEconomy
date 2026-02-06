@@ -29,36 +29,40 @@ export async function GET(request: Request) {
       }
     }
 
+    const processedDir = path.join(DATA_DIR, 'processed');
+
     // Ensure directory exists
     try {
-      await fs.access(DATA_DIR);
+      await fs.access(processedDir);
     } catch {
-      return NextResponse.json([]); // Return empty if dir doesn't exist
+      return NextResponse.json({ banks: [] });
     }
 
-    const allFiles = await getFilesRecursively(DATA_DIR);
-    const targetExtensions = ['.json'];
-    const filteredFiles = allFiles.filter(file =>
-      targetExtensions.some(ext => file.toLowerCase().endsWith(ext))
-    );
+    // Get all bank folders
+    const entries = await fs.readdir(processedDir, { withFileTypes: true });
+    const bankFolders = entries.filter(e => e.isDirectory());
 
-    const fileStats = await Promise.all(filteredFiles.map(async (filePath) => {
-      const stats = await fs.stat(filePath);
-      const relativePath = path.relative(DATA_DIR, filePath).split(path.sep).join('/');
+    const banks = await Promise.all(bankFolders.map(async (bankDir) => {
+      const bankPath = path.join(processedDir, bankDir.name);
+      const files = await fs.readdir(bankPath);
+      const jsonFiles = files.filter(f => f.endsWith('.json'));
 
-      let bank = null;
-      let accountType = null;
-      let dateRange = null;
+      const fileDetails = await Promise.all(jsonFiles.map(async (fileName, index) => {
+        const filePath = path.join(bankPath, fileName);
+        const stats = await fs.stat(filePath);
+        const relativePath = path.relative(DATA_DIR, filePath).split(path.sep).join('/');
 
-      if (filePath.toLowerCase().endsWith('.json')) {
+        let dateRange = null;
+        let accountType = null;
+
         try {
           const content = await fs.readFile(filePath, 'utf-8');
           const data = JSON.parse(content);
+
           if (data.meta_info) {
-            bank = data.meta_info.banco || null;
             accountType = data.meta_info.tipo_cuenta || null;
           }
-          // Extract date range from transactions
+
           if (data.transacciones && Array.isArray(data.transacciones) && data.transacciones.length > 0) {
             const dates = data.transacciones
               .map((t: { fecha?: string }) => t.fecha)
@@ -66,27 +70,42 @@ export async function GET(request: Request) {
               .sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime());
 
             if (dates.length > 0) {
-              const firstDate = dates[0];
-              const lastDate = dates[dates.length - 1];
-              dateRange = `${firstDate} - ${lastDate}`;
+              dateRange = `${dates[0]} - ${dates[dates.length - 1]}`;
             }
           }
         } catch (e) {
           console.warn(`Could not read metadata for ${filePath}`, e);
         }
-      }
+
+        return {
+          number: index + 1,
+          name: relativePath,
+          displayName: fileName.replace('.json', ''),
+          size: stats.size,
+          updatedAt: stats.mtime,
+          dateRange,
+          accountType
+        };
+      }));
+
+      // Sort files by number in filename
+      fileDetails.sort((a, b) => {
+        const numA = parseInt(a.displayName.match(/-(\d+)$/)?.[1] || '0', 10);
+        const numB = parseInt(b.displayName.match(/-(\d+)$/)?.[1] || '0', 10);
+        return numA - numB;
+      });
+
+      // Re-assign numbers after sorting
+      fileDetails.forEach((f, i) => f.number = i + 1);
 
       return {
-        name: relativePath,
-        size: stats.size,
-        updatedAt: stats.mtime,
-        bank,
-        accountType,
-        dateRange
+        bankName: bankDir.name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        folderName: bankDir.name,
+        files: fileDetails
       };
     }));
 
-    return NextResponse.json(fileStats);
+    return NextResponse.json({ banks });
   } catch (error) {
     console.error("Error listing files:", error);
     return NextResponse.json({ error: 'Failed to list files' }, { status: 500 });

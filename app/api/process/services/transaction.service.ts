@@ -5,9 +5,22 @@ import { getProcessedDir, getTempProcessedDir, getTempPreprocessedDir, getTempDi
 
 export class TransactionService {
   static async saveProcessedData(data: any, filePath: string, outputName?: string) {
-    const fileName = outputName || path.basename(filePath, path.extname(filePath));
     const processedDir = getProcessedDir();
-    const outputPath = path.join(processedDir, `${fileName}.json`);
+
+    // Get bank name from data or use 'other'
+    const bankName = data.meta_info?.banco || 'other';
+    const normalizedBankName = bankName
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '');
+
+    // Create bank subfolder
+    const bankFolder = path.join(processedDir, normalizedBankName);
+    await fs.promises.mkdir(bankFolder, { recursive: true });
+
+    // Get next numbered filename
+    const numberedName = await this.getNextNumberedName(bankFolder, normalizedBankName);
+    const outputPath = path.join(bankFolder, `${numberedName}.json`);
 
     // Add UUID to each transaction if not already present
     if (data.transacciones) {
@@ -17,7 +30,6 @@ export class TransactionService {
       }));
     }
 
-    await fs.promises.mkdir(processedDir, { recursive: true });
     await fs.promises.writeFile(outputPath, JSON.stringify(data, null, 2));
 
     // Clear temp files after confirmed save
@@ -29,6 +41,33 @@ export class TransactionService {
 
     return outputPath;
   }
+
+  static async getNextNumberedName(bankFolder: string, baseName: string): Promise<string> {
+    try {
+      const files = await fs.promises.readdir(bankFolder);
+      const jsonFiles = files.filter(f => f.endsWith('.json'));
+
+      if (jsonFiles.length === 0) {
+        return `${baseName}-01`;
+      }
+
+      // Find highest number
+      let maxNum = 0;
+      for (const f of jsonFiles) {
+        const match = f.match(/-(\d+)\.json$/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
+
+      const nextNum = maxNum + 1;
+      return `${baseName}-${String(nextNum).padStart(2, '0')}`;
+    } catch (e) {
+      return `${baseName}-01`;
+    }
+  }
+
 
   static async saveTempProcessedData(data: any, filePath: string, outputName?: string) {
     const fileName = outputName || path.basename(filePath, path.extname(filePath));
