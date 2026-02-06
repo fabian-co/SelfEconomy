@@ -25,6 +25,7 @@ interface UploadStepProps extends SharedStepProps {
   isAiProcessing: boolean;
   isValid: boolean;
   fileExtension: string | null;
+  pageProgress: { current: number; total: number; progress: number } | null;
 }
 
 export function UploadStep({
@@ -47,7 +48,8 @@ export function UploadStep({
   onSubmit,
   isAiProcessing,
   isValid,
-  fileExtension
+  fileExtension,
+  pageProgress
 }: UploadStepProps) {
   const { register, watch } = form;
   const selectedFile = watch("file");
@@ -121,14 +123,6 @@ export function UploadStep({
         </div>
       </div>
 
-      <TemplateLibrary
-        availableTemplates={availableTemplates}
-        onFetchTemplates={fetchTemplates}
-        onClearTemplates={clearTemplates}
-        onSelectTemplate={setDetectedTemplate}
-        fileExtension={fileExtension}
-      />
-
       <div className="grid gap-2">
         <Label>
           Archivo (.pdf, .csv, .xlsx) <span className="text-rose-500">*</span>
@@ -151,6 +145,22 @@ export function UploadStep({
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
+        {/* Page Progress Bar */}
+        {pageProgress && isUploading && (
+          <div className="mb-3">
+            <div className="flex justify-between text-sm mb-2">
+              <span className="text-zinc-500 dark:text-zinc-400">Procesando página {pageProgress.current} de {pageProgress.total}</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{pageProgress.progress}%</span>
+            </div>
+            <div className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300 ease-out"
+                style={{ width: `${pageProgress.progress}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {detectedTemplate && !isUploading ? (
           <TemplateBanner
             detectedTemplate={detectedTemplate}

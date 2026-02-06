@@ -72,21 +72,40 @@ def extract_text_from_pdf(file_path, password=None):
         raise Exception(f"Error extrayendo texto de PDF: {str(e)}")
     return "\n\n".join(text_content)
 
-def extract_text_from_excel(file_path):
+def extract_text_from_excel(file_path, rows_per_page=50):
     try:
         df = pd.read_excel(file_path)
-        # Convert to CSV for robust processing
-        return df.to_csv(index=False)
+        return split_dataframe_into_pages(df, rows_per_page)
     except Exception as e:
         raise Exception(f"Error extrayendo texto de Excel: {str(e)}")
 
-def extract_text_from_csv(file_path):
+def split_dataframe_into_pages(df, rows_per_page=50):
+    """Split a dataframe into pages with page markers, similar to PDF processing."""
+    text_content = []
+    total_rows = len(df)
+    num_pages = (total_rows + rows_per_page - 1) // rows_per_page  # Ceiling division
+    
+    for page_num in range(num_pages):
+        start_row = page_num * rows_per_page
+        end_row = min(start_row + rows_per_page, total_rows)
+        page_df = df.iloc[start_row:end_row]
+        
+        page_output = [f"--- PÁGINA {page_num + 1} ---"]
+        page_output.append("[ESTRUCTURA_TABULAR_CON_DESCRIPCIONES_COMPLETAS]")
+        page_output.append(f"💡 Filas {start_row + 1} a {end_row} de {total_rows} total.")
+        page_output.append(page_df.to_csv(index=False))
+        
+        text_content.append("\n".join(page_output))
+    
+    return "\n\n".join(text_content)
+
+def extract_text_from_csv(file_path, rows_per_page=50):
     try:
         # Try different encodings
         for enc in ['utf-8', 'latin-1', 'cp1252']:
             try:
                 df = pd.read_csv(file_path, encoding=enc)
-                return df.to_csv(index=False)
+                return split_dataframe_into_pages(df, rows_per_page)
             except UnicodeDecodeError:
                 continue
         raise Exception("No se pudo decodificar el archivo CSV con los encodings probados.")
@@ -108,10 +127,8 @@ if __name__ == "__main__":
             text = extract_text_from_pdf(args.input, args.password)
         elif file_ext in ['.xlsx', '.xls']:
             text = extract_text_from_excel(args.input)
-            text = "[ESTRUCTURA_TABULAR_CON_DESCRIPCIONES_COMPLETAS]\n" + text
         elif file_ext == '.csv':
             text = extract_text_from_csv(args.input)
-            text = "[ESTRUCTURA_TABULAR_CON_DESCRIPCIONES_COMPLETAS]\n" + text
         else:
             raise Exception(f"Extensión de archivo no soportada: {file_ext}")
             

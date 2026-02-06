@@ -35,6 +35,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentVersion, setCurrentVersion] = useState<number>(1);
   const [pendingRules, setPendingRules] = useState<any[]>([]);
+  const [pageProgress, setPageProgress] = useState<{ current: number; total: number; progress: number } | null>(null);
 
   const form = useForm<UploadFormValues>({
     resolver: zodResolver(uploadSchema),
@@ -190,8 +191,10 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
 
   const performAiNormalization = async (text: string, bank: string, accountType: string, sId?: string, fPath?: string, oName?: string, signal?: AbortSignal) => {
     setIsAiProcessing(true);
+    setPageProgress(null);
+
     try {
-      const aiRes = await fetch('/api/ai/normalize', {
+      const response = await fetch('/api/ai/normalize-pages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -204,20 +207,57 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
         }),
         signal
       });
-      const aiNormalizedData = await aiRes.json();
-      if (!aiRes.ok) throw new Error(aiNormalizedData.error || 'Error en IA');
 
-      setAiData(aiNormalizedData);
-      if (aiNormalizedData.meta_info.banco) setValue("bank", aiNormalizedData.meta_info.banco);
-      if (aiNormalizedData.meta_info.tipo_cuenta) setValue("accountType", aiNormalizedData.meta_info.tipo_cuenta);
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
 
-      setStep('ai_preview');
+      if (!reader) throw new Error('No reader available');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const text = decoder.decode(value);
+        const lines = text.split('\n\n').filter(line => line.startsWith('data: '));
+
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line.replace('data: ', ''));
+
+            if (data.step === 'complete' && data.result) {
+              setAiData(data.result);
+              setPageProgress(null);
+              if (data.result.meta_info?.banco) setValue("bank", data.result.meta_info.banco);
+              if (data.result.meta_info?.tipo_cuenta) setValue("accountType", data.result.meta_info.tipo_cuenta);
+              if (data.result.version) setCurrentVersion(data.result.version);
+              setStep('ai_preview');
+            } else if (data.step === 'error') {
+              throw new Error(data.message || 'Error en IA');
+            } else if (data.step === 'cancelled') {
+              toast.info('Procesamiento cancelado');
+            } else if (data.step === 'page') {
+              setPageProgress({
+                current: data.currentPage,
+                total: data.totalPages,
+                progress: data.progress
+              });
+            }
+          } catch (e: any) {
+            if (e.message && e.message !== 'Error en IA') {
+              // Ignore parse errors, but throw actual errors
+            } else if (e.message) {
+              throw e;
+            }
+          }
+        }
+      }
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         toast.error(error.message);
       }
     } finally {
       setIsAiProcessing(false);
+      setPageProgress(null);
     }
   };
 
@@ -514,6 +554,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             isAiProcessing={isAiProcessing}
             isValid={isValid}
             fileExtension={fileExtension}
+            pageProgress={pageProgress}
           />
         )}
 
