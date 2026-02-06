@@ -56,151 +56,150 @@ export function UploadStep({
 
   return (
     <div className="grid gap-4 py-4">
-      <div className="grid gap-2">
-        <Label htmlFor="extractName">
-          Nombre del Extracto <span className="text-rose-500">*</span>
-        </Label>
-        <Input
-          id="extractName"
-          placeholder="Ej: Extracto Octubre 2023"
-          {...register("extractName")}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !isUploading && isValid) {
-              e.preventDefault();
-              onSubmit();
-            }
-          }}
-          className={`rounded-xl ${form.formState.errors.extractName ? 'border-rose-500 focus-visible:ring-rose-500/20' : ''}`}
-        />
-        {form.formState.errors.extractName && (
-          <p className="text-[10px] text-rose-500">{form.formState.errors.extractName.message}</p>
-        )}
-      </div>
+      {/* Show processing UI when uploading */}
+      {isUploading ? (
+        <>
+          {/* Processing message */}
+          <div className="flex flex-col items-center justify-center py-8 gap-4">
+            <div className="h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+              <Loader2Icon className="h-8 w-8 text-emerald-500 animate-spin" />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                Procesando tu extracto
+              </h3>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
+                Por favor espera mientras extraemos los datos...
+              </p>
+            </div>
+          </div>
 
-      {isPDF && (
-        <div className="grid gap-2">
-          <Label htmlFor="password">
-            Contraseña del PDF <span className="text-zinc-400 font-normal">(Opcional)</span>
-          </Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="Contraseña"
-            {...register("password")}
-            onChange={(e) => {
-              register("password").onChange(e);
-              if (passwordError) setPasswordError(null);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !isUploading && isValid) {
-                e.preventDefault();
-                onSubmit();
-              }
-            }}
-            className={`rounded-xl ${passwordError ? 'border-rose-500 focus-visible:ring-rose-500/20' : ''}`}
-          />
-          {passwordError && (
-            <div className="flex items-center gap-2 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-xl">
-              <div className="h-6 w-6 rounded-full bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center shrink-0">
-                <XIcon className="h-3 w-3 text-rose-600 dark:text-rose-400" />
+          {/* Simplified Progress Bar */}
+          {pageProgress && (
+            <div className="mb-3">
+              <div className="flex justify-between text-sm mb-2">
+                <span className="text-zinc-500 dark:text-zinc-400">Procesando</span>
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{pageProgress.progress}%</span>
               </div>
-              <p className="text-xs text-rose-700 dark:text-rose-300">{passwordError}</p>
+              <div className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300 ease-out"
+                  style={{ width: `${pageProgress.progress}%` }}
+                />
+              </div>
             </div>
           )}
-        </div>
-      )}
 
-      <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-        <div className="flex flex-col gap-0.5">
-          <Label className="text-sm font-semibold">Procesamiento con IA</Label>
-          <p className="text-[10px] text-zinc-500">Usa IA para categorizar y normalizar automáticamente</p>
-        </div>
-        <div
-          className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${useAi ? 'bg-emerald-500' : 'bg-zinc-300 dark:bg-zinc-700'}`}
-          onClick={() => setUseAi(!useAi)}
-        >
-          <div className={`w-4 h-4 bg-white rounded-full transition-transform ${useAi ? 'translate-x-6' : 'translate-x-0'}`} />
-        </div>
-      </div>
-
-      <div className="grid gap-2">
-        <Label>
-          Archivo (.pdf, .csv, .xlsx) <span className="text-rose-500">*</span>
-        </Label>
-        <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-2xl cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors ${form.formState.errors.file ? 'border-rose-500 bg-rose-50/50' : 'border-zinc-200 dark:border-zinc-800'}`}>
-          <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <UploadIcon className={`h-6 w-6 mb-2 ${form.formState.errors.file ? 'text-rose-400' : 'text-zinc-400'}`} />
-            <p className={`text-xs ${form.formState.errors.file ? 'text-rose-500 font-medium' : 'text-zinc-500 px-4 text-center'}`}>
-              {selectedFile ? selectedFile.name : (form.formState.errors.file?.message || "Haz clic para seleccionar")}
-            </p>
+          {/* Cancel button */}
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="w-full py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-rose-200"
+          >
+            <XIcon className="h-4 w-4" />
+            Cancelar
+          </button>
+        </>
+      ) : (
+        <>
+          {/* Normal form when not uploading */}
+          <div className="grid gap-2">
+            <Label htmlFor="extractName">
+              Nombre del Banco <span className="text-rose-500">*</span>
+            </Label>
+            <Input
+              id="extractName"
+              placeholder="Ej: Bancolombia, Nu, BBVA"
+              {...register("extractName")}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !isUploading && isValid) {
+                  e.preventDefault();
+                  onSubmit();
+                }
+              }}
+              className={`rounded-xl ${form.formState.errors.extractName ? 'border-rose-500 focus-visible:ring-rose-500/20' : ''}`}
+            />
+            {form.formState.errors.extractName && (
+              <p className="text-[10px] text-rose-500">{form.formState.errors.extractName.message}</p>
+            )}
           </div>
-          <input
-            type="file"
-            className="hidden"
-            accept=".pdf,.csv,.xlsx"
-            onChange={handleFileChange}
-            disabled={isUploading}
-          />
-        </label>
-      </div>
 
-      <div className="mt-4 flex flex-col gap-2">
-        {/* Page Progress Bar */}
-        {pageProgress && isUploading && (
-          <div className="mb-3">
-            <div className="flex justify-between text-sm mb-2">
-              <span className="text-zinc-500 dark:text-zinc-400">Procesando página {pageProgress.current} de {pageProgress.total}</span>
-              <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{pageProgress.progress}%</span>
-            </div>
-            <div className="w-full bg-zinc-200 dark:bg-zinc-800 rounded-full h-2.5 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-300 ease-out"
-                style={{ width: `${pageProgress.progress}%` }}
+          {isPDF && (
+            <div className="grid gap-2">
+              <Label htmlFor="password">
+                Contraseña del PDF <span className="text-zinc-400 font-normal">(Opcional)</span>
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Contraseña"
+                {...register("password")}
+                onChange={(e) => {
+                  register("password").onChange(e);
+                  if (passwordError) setPasswordError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !isUploading && isValid) {
+                    e.preventDefault();
+                    onSubmit();
+                  }
+                }}
+                className={`rounded-xl ${passwordError ? 'border-rose-500 focus-visible:ring-rose-500/20' : ''}`}
               />
+              {passwordError && (
+                <div className="flex items-center gap-2 p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 rounded-xl">
+                  <div className="h-6 w-6 rounded-full bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center shrink-0">
+                    <XIcon className="h-3 w-3 text-rose-600 dark:text-rose-400" />
+                  </div>
+                  <p className="text-xs text-rose-700 dark:text-rose-300">{passwordError}</p>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          )}
 
-        {detectedTemplate && !isUploading ? (
-          <TemplateBanner
-            detectedTemplate={detectedTemplate}
-            isAiProcessing={isAiProcessing}
-            onUseTemplate={handleUseTemplate}
-            onSkipTemplate={handleSkipTemplate}
-          />
-        ) : (
-          <div className="w-full flex gap-2">
-            {isUploading && (
+          <div className="grid gap-2">
+            <Label>
+              Archivo (.pdf, .csv, .xlsx) <span className="text-rose-500">*</span>
+            </Label>
+            <label className={`flex flex-col items-center justify-center w-full h-28 border-2 border-dashed rounded-2xl cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors ${form.formState.errors.file ? 'border-rose-500 bg-rose-50/50' : 'border-zinc-200 dark:border-zinc-800'}`}>
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                <UploadIcon className={`h-6 w-6 mb-2 ${form.formState.errors.file ? 'text-rose-400' : 'text-zinc-400'}`} />
+                <p className={`text-xs ${form.formState.errors.file ? 'text-rose-500 font-medium' : 'text-zinc-500 px-4 text-center'}`}>
+                  {selectedFile ? selectedFile.name : (form.formState.errors.file?.message || "Haz clic para seleccionar")}
+                </p>
+              </div>
+              <input
+                type="file"
+                className="hidden"
+                accept=".pdf,.csv,.xlsx"
+                onChange={handleFileChange}
+                disabled={isUploading}
+              />
+            </label>
+          </div>
+
+          <div className="mt-4 flex flex-col gap-2">
+            {detectedTemplate ? (
+              <TemplateBanner
+                detectedTemplate={detectedTemplate}
+                isAiProcessing={isAiProcessing}
+                onUseTemplate={handleUseTemplate}
+                onSkipTemplate={handleSkipTemplate}
+              />
+            ) : (
               <button
                 type="button"
-                onClick={handleCancel}
-                className="flex-1 py-3 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl font-bold transition-all flex items-center justify-center gap-2 border border-rose-200"
+                onClick={onSubmit}
+                disabled={!isValid}
+                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:shadow-none text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
               >
-                <XIcon className="h-4 w-4" />
-                Cancelar
+                <SearchIcon className="h-5 w-5" />
+                Analizar con IA
               </button>
             )}
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={isUploading || !isValid}
-              className={`${isUploading ? 'flex-[2]' : 'w-full'} py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:shadow-none text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20`}
-            >
-              {isUploading ? (
-                <>
-                  <Loader2Icon className="h-5 w-5 animate-spin" />
-                  {useAi ? 'Analizando...' : 'Subiendo...'}
-                </>
-              ) : (
-                <>
-                  {useAi ? <SearchIcon className="h-5 w-5" /> : <UploadIcon className="h-5 w-5" />}
-                  {useAi ? 'Analizar con IA' : 'Subir y Procesar'}
-                </>
-              )}
-            </button>
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }

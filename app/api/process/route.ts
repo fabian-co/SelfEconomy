@@ -75,10 +75,8 @@ export async function POST(request: Request) {
     // -- Actions that don't require file content (skip decryption) --
     if (action === 'save_json') {
       await TransactionService.saveProcessedData(data, filePath, outputName);
-      if (data.template_config) {
-        await TemplateService.saveTemplate(data.template_config, fileExt);
-      }
-      return NextResponse.json({ success: true, message: 'Datos y template guardados' });
+      // Template logic disabled - save AI response directly
+      return NextResponse.json({ success: true, message: 'Datos guardados' });
     }
 
     if (action === 'recalculate_json') {

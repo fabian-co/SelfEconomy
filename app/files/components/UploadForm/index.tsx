@@ -338,6 +338,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
   const handleAiConfirm = async () => {
     setIsUploading(true);
     try {
+      // Save AI data directly without modifications
       const res = await fetch('/api/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -348,8 +349,8 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
             ...aiData,
             meta_info: {
               ...aiData.meta_info,
-              banco: selectedBank || "",
-              tipo_cuenta: (selectedAccountType || "debit") as any
+              banco: watch("extractName") || aiData.meta_info?.banco || "Desconocido",
+              tipo_cuenta: aiData.meta_info?.tipo_cuenta || "debit"
             }
           },
           outputName: watch("extractName")
@@ -358,35 +359,7 @@ export function UploadForm({ isOpen, onClose, onUploadSuccess }: UploadFormProps
 
       if (!res.ok) throw new Error('Error al guardar el resultado de la IA');
 
-      // Persist pending rules
-      for (const rule of pendingRules) {
-        if (rule.markAsIgnored !== undefined) {
-          await fetch("/api/ignore-rules", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              description: rule.description,
-              isIgnored: rule.markAsIgnored,
-              applyGlobally: rule.applyIgnoreGlobally
-            }),
-          });
-        }
-
-        if (rule.markAsPositive !== undefined) {
-          await fetch("/api/flip-rules", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              description: rule.description,
-              isPositive: rule.markAsPositive,
-              isEdited: true,
-              applyGlobally: rule.applyPositiveGlobally
-            }),
-          });
-        }
-      }
-
-      toast.success('IA: Datos normalizados y reglas guardadas');
+      toast.success('Datos guardados correctamente');
       onUploadSuccess();
       handleClose();
     } catch (error: any) {
