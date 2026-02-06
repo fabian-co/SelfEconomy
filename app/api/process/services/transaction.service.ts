@@ -118,7 +118,6 @@ export class TransactionService {
   }
 
   static calculateTotals(data: any, paymentKeywords: string[]) {
-    const isBancolombia = data.meta_info.banco === 'Bancolombia';
     let totalAbonos = 0;
     let totalCargos = 0;
 
@@ -127,32 +126,18 @@ export class TransactionService {
         t.descripcion.toLowerCase().includes(k.toLowerCase())
       );
 
-      if (isBancolombia) {
-        if (!isIgnored) {
-          if (t.valor > 0) totalAbonos += t.valor;
-          else totalCargos += Math.abs(t.valor);
-        }
-        return { ...t, ignored: isIgnored };
-      } else {
-        const absVal = Math.abs(t.valor);
-        const newVal = isIgnored ? absVal : -absVal;
-        if (!isIgnored) {
-          if (newVal > 0) totalAbonos += newVal;
-          else totalCargos += Math.abs(newVal);
-        }
-        return { ...t, valor: newVal, ignored: isIgnored };
+      // Calculate totals based on original value signs (don't mutate values)
+      if (!isIgnored) {
+        if (t.valor > 0) totalAbonos += t.valor;
+        else totalCargos += Math.abs(t.valor);
       }
+
+      return { ...t, ignored: isIgnored };
     });
 
     data.meta_info.resumen.total_abonos = totalAbonos;
     data.meta_info.resumen.total_cargos = totalCargos;
-
-    if (isBancolombia) {
-      const saldoAnterior = data.meta_info.resumen.saldo_anterior || 0;
-      data.meta_info.resumen.saldo_actual = saldoAnterior + totalAbonos - totalCargos;
-    } else {
-      data.meta_info.resumen.saldo_actual = totalAbonos - totalCargos;
-    }
+    data.meta_info.resumen.saldo_actual = totalAbonos - totalCargos;
 
     return data;
   }
