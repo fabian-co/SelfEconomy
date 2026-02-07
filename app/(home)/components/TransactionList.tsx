@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import { Category } from "./category-manager/CategoryItem";
 import { IconMap } from "./category-manager/constants";
 
+import { useSettingsStore } from "@/lib/store/settingsStore";
+
 interface TransactionListProps {
   currentGroup?: GroupedTransaction;
   onPrev: () => void;
@@ -33,6 +35,8 @@ export function TransactionList({
   // "uncategorized" is expanded by default as requested.
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["uncategorized"]));
   const [searchQuery, setSearchQuery] = useState("");
+
+  const { ignoreCreditCardInflows, ignoreDebitCardInflows } = useSettingsStore();
 
   const fetchCategories = () => {
     fetch("/api/categories")
@@ -72,7 +76,23 @@ export function TransactionList({
         };
       }
       groups[catId].transactions.push(tx);
-      groups[catId].total += tx.valor;
+
+      // Calculate total based on settings
+      // Check ignore setting logic
+      let shouldCount = !tx.ignored;
+
+      if (shouldCount) {
+        if (tx.tipo_cuenta === 'credit' && tx.valor > 0 && ignoreCreditCardInflows) {
+          shouldCount = false;
+        }
+        if (tx.tipo_cuenta === 'debit' && tx.valor > 0 && ignoreDebitCardInflows) {
+          shouldCount = false;
+        }
+      }
+
+      if (shouldCount) {
+        groups[catId].total += tx.valor;
+      }
     });
 
     // Sort categories: Uncategorized last, others alphabetical? 
@@ -83,7 +103,7 @@ export function TransactionList({
       if (b.id === "uncategorized") return -1;
       return a.name.localeCompare(b.name);
     });
-  }, [currentGroup, categories, searchQuery]);
+  }, [currentGroup, categories, searchQuery, ignoreCreditCardInflows, ignoreDebitCardInflows]);
 
   const handleUpdateTransaction = async (data: any) => {
     let categorySuccess = true;

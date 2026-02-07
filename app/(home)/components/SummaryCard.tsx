@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderIcon, TrendingDownIcon, TrendingUpIcon, WalletIcon } from "lucide-react";
+import { FolderIcon, TrendingDownIcon, TrendingUpIcon, WalletIcon, Cog } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import { MetaInfo, GroupedTransaction } from "../types/index";
@@ -21,13 +21,22 @@ export function SummaryCard({ metaInfo, currentGroup }: SummaryCardProps) {
           </div>
           <span className="text-xl font-bold tracking-tight">SelfEconomy</span>
         </div>
-        <Link
-          href="/files"
-          className="p-2.5 bg-zinc-800/50 rounded-2xl hover:bg-zinc-700 transition-colors group border border-zinc-700/30"
-          title="Manage Files"
-        >
-          <FolderIcon className="h-6 w-6 text-zinc-400 group-hover:text-white transition-colors" />
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/configuracion"
+            className="p-2.5 bg-zinc-800/50 rounded-2xl hover:bg-zinc-700 transition-colors group border border-zinc-700/30"
+            title="Configuración"
+          >
+            <Cog className="h-6 w-6 text-zinc-400 group-hover:text-white transition-colors" />
+          </Link>
+          <Link
+            href="/files"
+            className="p-2.5 bg-zinc-800/50 rounded-2xl hover:bg-zinc-700 transition-colors group border border-zinc-700/30"
+            title="Manage Files"
+          >
+            <FolderIcon className="h-6 w-6 text-zinc-400 group-hover:text-white transition-colors" />
+          </Link>
+        </div>
       </div>
 
       <div id="summary-card-balance" className="mb-8">
