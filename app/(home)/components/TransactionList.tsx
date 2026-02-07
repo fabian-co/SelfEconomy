@@ -4,12 +4,14 @@ import { useMemo, useState, useEffect } from "react";
 import { MonthNavigation } from "./MonthNavigation";
 import { TransactionItem } from "./TransactionItem";
 import { GroupedTransaction } from "../types/index";
-import { PlusCircle, Tag, ChevronDown, ChevronRight, Search, Edit } from "lucide-react";
+import { PlusCircle, Tag, ChevronDown, ChevronRight, Search, Edit, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryManager } from "./category-manager/CategoryManager";
 import { useRouter } from "next/navigation";
 import { Category } from "./category-manager/CategoryItem";
 import { IconMap } from "./category-manager/constants";
+import { AICategoryOrganizer } from "./AICategoryOrganizer";
+import { Transaction } from "../types/index";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +28,7 @@ interface TransactionListProps {
   onNext: () => void;
   canGoPrev: boolean;
   canGoNext: boolean;
+  allTransactions: Transaction[];
 }
 
 export function TransactionList({
@@ -34,9 +37,11 @@ export function TransactionList({
   onNext,
   canGoPrev,
   canGoNext,
+  allTransactions = []
 }: TransactionListProps) {
   const router = useRouter();
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+  const [isOrganizerOpen, setIsOrganizerOpen] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   // Use a set of expanded IDs instead of collapsed for easier "collapsed by default" logic
   // "uncategorized" is expanded by default as requested.
@@ -260,12 +265,24 @@ export function TransactionList({
         onOpenChange={setIsCategoryManagerOpen}
       />
 
+      <AICategoryOrganizer
+        isOpen={isOrganizerOpen}
+        onClose={() => setIsOrganizerOpen(false)}
+        allTransactions={allTransactions}
+        categories={categories}
+        onUpdate={() => {
+          fetchCategories(); // Refresh categories
+          router.refresh(); // Refresh data
+        }}
+        currentMonth={currentGroup?.monthKey}
+      />
+
       <div id="transaction-groups-wrapper" className="space-y-4">
         {categorizedGroups.map((group) => (
           <div key={group.id} className="border border-zinc-100 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-950 overflow-hidden shadow-sm">
-            <button
+            <div
               onClick={() => toggleGroup(group.id)}
-              className="w-full flex items-center justify-between p-4 bg-zinc-50/50 dark:bg-zinc-900/20 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/40 transition-colors border-b border-zinc-100 dark:border-zinc-800"
+              className="w-full flex items-center justify-between p-4 bg-zinc-50/50 dark:bg-zinc-900/20 hover:bg-zinc-100/50 dark:hover:bg-zinc-900/40 transition-colors border-b border-zinc-100 dark:border-zinc-800 cursor-pointer"
             >
               <div className="flex items-center gap-3">
                 <div
@@ -286,6 +303,21 @@ export function TransactionList({
                     ({group.transactions.length})
                   </span>
                 </span>
+
+                {group.id === 'uncategorized' && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsOrganizerOpen(true);
+                    }}
+                    className="ml-2 h-7 gap-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    <span className="text-xs font-semibold">Organizar con IA</span>
+                  </Button>
+                )}
               </div>
 
               <div className="flex items-center gap-4">
@@ -294,7 +326,7 @@ export function TransactionList({
                 </span>
                 {expandedGroups.has(group.id) ? <ChevronDown className="h-4 w-4 text-zinc-400" /> : <ChevronRight className="h-4 w-4 text-zinc-400" />}
               </div>
-            </button>
+            </div>
 
             {expandedGroups.has(group.id) && (
               <div className="divide-y divide-zinc-100 dark:divide-zinc-800">

@@ -7,8 +7,13 @@ export interface Transaction {
   ignored?: boolean;
   banco?: string;
   tipo_cuenta?: string;
+  id?: string;
   categoryId?: string;
   categoryName?: string;
+  isMarkedPositive?: boolean;
+  isPositiveGlobal?: boolean;
+  isMarkedIgnored?: boolean;
+  isIgnoredGlobal?: boolean;
 }
 
 export interface MetaInfo {

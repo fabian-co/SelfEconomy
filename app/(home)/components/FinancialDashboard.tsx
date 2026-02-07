@@ -217,6 +217,7 @@ export function FinancialDashboard({ transactions, metaInfo: initialMetaInfo }: 
             onNext={handleNext}
             canGoPrev={currentIndex < groupedTransactions.length - 1}
             canGoNext={currentIndex > 0}
+            allTransactions={transactions}
           />
         </div>
       </div>
