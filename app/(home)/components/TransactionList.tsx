@@ -4,12 +4,19 @@ import { useMemo, useState, useEffect } from "react";
 import { MonthNavigation } from "./MonthNavigation";
 import { TransactionItem } from "./TransactionItem";
 import { GroupedTransaction } from "../types/index";
-import { PlusCircle, Tag, ChevronDown, ChevronRight, Search } from "lucide-react";
+import { PlusCircle, Tag, ChevronDown, ChevronRight, Search, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryManager } from "./category-manager/CategoryManager";
 import { useRouter } from "next/navigation";
 import { Category } from "./category-manager/CategoryItem";
 import { IconMap } from "./category-manager/constants";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ArrowUpDown, SortAsc, SortDesc } from "lucide-react";
 
 import { useSettingsStore } from "@/lib/store/settingsStore";
 
@@ -35,6 +42,7 @@ export function TransactionList({
   // "uncategorized" is expanded by default as requested.
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["uncategorized"]));
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState<'amount-asc' | 'amount-desc' | 'alpha'>('amount-asc');
 
   const { ignoreCreditCardInflows, ignoreDebitCardInflows } = useSettingsStore();
 
@@ -103,10 +111,18 @@ export function TransactionList({
       if (a.id === "uncategorized") return 1;
       if (b.id === "uncategorized") return -1;
 
-      // Sort by total ascending (most negative/largest expense first)
-      return a.total - b.total;
+      if (sortOrder === 'amount-asc') {
+        // Sort by total ascending (most negative/largest expense first)
+        return a.total - b.total;
+      } else if (sortOrder === 'amount-desc') {
+        // Sort by total descending (least negative/smallest expense first)
+        return b.total - a.total;
+      } else {
+        // Alphabetical
+        return a.name.localeCompare(b.name);
+      }
     });
-  }, [currentGroup, categories, searchQuery, ignoreCreditCardInflows, ignoreDebitCardInflows]);
+  }, [currentGroup, categories, searchQuery, ignoreCreditCardInflows, ignoreDebitCardInflows, sortOrder]);
 
   const handleUpdateTransaction = async (data: any) => {
     let categorySuccess = true;
@@ -206,22 +222,36 @@ export function TransactionList({
 
       <div id="category-banner" className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-100 dark:border-blue-900/30 rounded-2xl px-6 py-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-blue-600 dark:text-blue-400">
-              <Tag className="h-5 w-5" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-blue-900 dark:text-blue-100">Gestión de Categorías</h3>
-              <p className="text-xs text-blue-700/70 dark:text-blue-400/70">Personaliza tus reglas de clasificación</p>
-            </div>
-          </div>
           <Button
             onClick={() => setIsCategoryManagerOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-md transition-all hover:scale-105 active:scale-95 rounded-xl px-6"
+            className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-md transition-all hover:scale-105 active:scale-95 rounded-xl px-6 h-10"
           >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Configurar
+            <Edit className="mr-2 h-4 w-4" />
+            Editar Categorías
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2 text-zinc-600 dark:text-zinc-400 bg-white/50 dark:bg-zinc-800/50 border-blue-200 dark:border-blue-800 hover:bg-white dark:hover:bg-zinc-800 h-10 px-4">
+                <ArrowUpDown className="h-4 w-4" />
+                Ordenar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setSortOrder('amount-asc')}>
+                <SortDesc className="mr-2 h-4 w-4" />
+                Mayor Gasto (Mayor a Mayor Valor)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('amount-desc')}>
+                <SortAsc className="mr-2 h-4 w-4" />
+                Menor Gasto (Menor a Menor Valor)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('alpha')}>
+                <SortAsc className="mr-2 h-4 w-4" />
+                Alfabético (A-Z)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
