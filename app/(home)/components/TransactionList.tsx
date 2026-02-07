@@ -307,15 +307,14 @@ export function TransactionList({
                 {group.id === 'uncategorized' && (
                   <Button
                     size="sm"
-                    variant="ghost"
                     onClick={(e) => {
                       e.stopPropagation();
                       setIsOrganizerOpen(true);
                     }}
-                    className="ml-2 h-7 gap-1.5 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/40"
+                    className="ml-4 h-8 gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm border border-blue-500/20 shadow-blue-500/20 transition-all hover:scale-105"
                   >
-                    <Sparkles className="w-3 h-3" />
-                    <span className="text-xs font-semibold">Organizar con IA</span>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span className="text-xs font-bold">Organizar con IA</span>
                   </Button>
                 )}
               </div>
