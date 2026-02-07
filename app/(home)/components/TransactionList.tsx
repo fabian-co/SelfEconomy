@@ -99,9 +99,12 @@ export function TransactionList({
     // Or maybe by total value? User said "prioritizing categories".
     // I'll put Uncategorized at the bottom.
     return Object.values(groups).sort((a, b) => {
+      // Prioritize putting uncategorized at the bottom always
       if (a.id === "uncategorized") return 1;
       if (b.id === "uncategorized") return -1;
-      return a.name.localeCompare(b.name);
+
+      // Sort by total ascending (most negative/largest expense first)
+      return a.total - b.total;
     });
   }, [currentGroup, categories, searchQuery, ignoreCreditCardInflows, ignoreDebitCardInflows]);
 
