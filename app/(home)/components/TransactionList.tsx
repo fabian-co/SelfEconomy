@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { Category } from "./category-manager/CategoryItem";
 import { IconMap } from "./category-manager/constants";
 import { AICategoryOrganizer } from "./AICategoryOrganizer";
+import { ExpensesPieChart } from "./ExpensesPieChart";
 import { Transaction } from "../types/index";
 import {
   DropdownMenu,
@@ -211,6 +212,13 @@ export function TransactionList({
         onNext={onNext}
         canGoPrev={canGoPrev}
         canGoNext={canGoNext}
+      />
+
+      <ExpensesPieChart
+        currentGroup={currentGroup}
+        categories={categories}
+        ignoreCreditCardInflows={ignoreCreditCardInflows}
+        ignoreDebitCardInflows={ignoreDebitCardInflows}
       />
 
       {/* Search Input */}
