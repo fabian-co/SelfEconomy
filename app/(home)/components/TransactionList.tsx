@@ -117,15 +117,39 @@ export function TransactionList({
       if (a.id === "uncategorized") return 1;
       if (b.id === "uncategorized") return -1;
 
-      if (sortOrder === 'amount-asc') {
-        // Sort by total ascending (most negative/largest expense first)
-        return a.total - b.total;
-      } else if (sortOrder === 'amount-desc') {
-        // Sort by total descending (least negative/smallest expense first)
-        return b.total - a.total;
-      } else {
-        // Alphabetical
+      if (sortOrder === 'alpha') {
         return a.name.localeCompare(b.name);
+      }
+
+      // Separate by sign: Positive (Income) vs Negative (Expense)
+      const aIsPositive = a.total >= 0;
+      const bIsPositive = b.total >= 0;
+
+      // Positive categories always come before negative ones
+      if (aIsPositive && !bIsPositive) return -1;
+      if (!aIsPositive && bIsPositive) return 1;
+
+      // Both are same sign
+      if (sortOrder === 'amount-desc') {
+        // "Mayor Gasto" / "Mayor Ingreso" (Highest Magnitude first)
+        if (aIsPositive) {
+          // Income: High to Low (100 -> 50)
+          return b.total - a.total;
+        } else {
+          // Expense: High Magnitude to Low Magnitude (-100 -> -50)
+          // -100 is numerically smaller than -50, so ascending numeric sort puts -100 first
+          return a.total - b.total;
+        }
+      } else {
+        // "Menor Gasto" / "Menor Ingreso" (Low Magnitude first)
+        if (aIsPositive) {
+          // Income: Low to High (50 -> 100)
+          return a.total - b.total;
+        } else {
+          // Expense: Low Magnitude to High Magnitude (-50 -> -100)
+          // -50 is numerically larger than -100, so descending numeric sort puts -50 first
+          return b.total - a.total;
+        }
       }
     });
   }, [currentGroup, categories, searchQuery, ignoreCreditCardInflows, ignoreDebitCardInflows, sortOrder]);
@@ -251,13 +275,13 @@ export function TransactionList({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setSortOrder('amount-asc')}>
-                <SortDesc className="mr-2 h-4 w-4" />
-                Mayor Gasto (Mayor a Mayor Valor)
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSortOrder('amount-desc')}>
+                <SortDesc className="mr-2 h-4 w-4" />
+                Menor Gasto (Mayor a Menor Valor)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSortOrder('amount-asc')}>
                 <SortAsc className="mr-2 h-4 w-4" />
-                Menor Gasto (Menor a Menor Valor)
+                Mayor Gasto (Menor a Mayor Valor)
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setSortOrder('alpha')}>
                 <SortAsc className="mr-2 h-4 w-4" />

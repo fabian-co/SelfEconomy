@@ -24,7 +24,7 @@ export function ExpensesPieChart({
   const data = useMemo(() => {
     if (!currentGroup) return [];
 
-    const groups: Record<string, { name: string; value: number; color: string; icon: string }> = {};
+    const dataMap: Record<string, { name: string; value: number; originalValue: number; color: string; icon: string }> = {};
 
     currentGroup.transactions.forEach(tx => {
       // Logic for ignoring transactions
@@ -32,26 +32,44 @@ export function ExpensesPieChart({
       if (tx.tipo_cuenta === 'credit' && tx.valor > 0 && ignoreCreditCardInflows) return;
       if (tx.tipo_cuenta === 'debit' && tx.valor > 0 && ignoreDebitCardInflows) return;
 
-      // Only count expenses (negative values)
-      if (tx.valor >= 0) return;
-
       const catId = tx.categoryId || "uncategorized";
       const category = categories.find(c => c.id === catId);
-      const absValue = Math.abs(tx.valor);
 
-      if (!groups[catId]) {
-        groups[catId] = {
+      if (!dataMap[catId]) {
+        dataMap[catId] = {
           name: category?.name || (catId === "uncategorized" ? "Sin Categoría" : "Desconocida"),
-          value: 0,
+          value: 0, // This will store the absolute value for the chart slices
+          originalValue: 0, // This stores the actual signed total
           color: category?.color || "#71717a",
           icon: category?.icon || "Tag"
         };
       }
-      groups[catId].value += absValue;
+      dataMap[catId].originalValue += tx.valor;
     });
 
-    return Object.values(groups)
-      .sort((a, b) => b.value - a.value);
+    // Convert to array and handle sorting
+    return Object.values(dataMap)
+      .map(item => ({
+        ...item,
+        value: Math.abs(item.originalValue) // Set absolute value for pie chart sizing
+      }))
+      .filter(item => item.value > 0) // Filter out zero-value categories
+      .sort((a, b) => {
+        const aIsPositive = a.originalValue >= 0;
+        const bIsPositive = b.originalValue >= 0;
+
+        if (aIsPositive && !bIsPositive) return -1; // Positive first
+        if (!aIsPositive && bIsPositive) return 1;
+
+        if (aIsPositive) {
+          // Both positive: descending value (100 -> 50)
+          return b.originalValue - a.originalValue;
+        } else {
+          // Both negative: descending magnitude (-100 -> -50)
+          // -100 is smaller than -50, so ascending numeric sort puts -100 first
+          return a.originalValue - b.originalValue;
+        }
+      });
   }, [currentGroup, categories, ignoreCreditCardInflows, ignoreDebitCardInflows]);
 
   if (data.length === 0) return null;
@@ -62,13 +80,15 @@ export function ExpensesPieChart({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       const percent = ((data.value / totalExpense) * 100).toFixed(1);
+      const isPositive = data.originalValue >= 0;
+
       return (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-3 rounded-xl shadow-lg">
           <p className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{data.name}</p>
           <div className="flex items-center gap-2 mt-1">
             <div className="w-2 h-2 rounded-full" style={{ backgroundColor: data.color }} />
-            <span className="text-xs text-zinc-500 dark:text-zinc-400">
-              {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(data.value)}
+            <span className={`text-xs ${isPositive ? 'text-emerald-600' : 'text-zinc-500 dark:text-zinc-400'}`}>
+              {new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(data.originalValue)}
             </span>
             <span className="text-xs font-medium text-zinc-400">({percent}%)</span>
           </div>
