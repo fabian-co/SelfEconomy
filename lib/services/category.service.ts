@@ -16,13 +16,30 @@ export class CategoryService {
   static async getAllCategories(): Promise<Category[]> {
     const defaults = await JsonStorageService.read<Category[]>(this.DEFAULT_PATH, []);
     const customs = await JsonStorageService.read<Category[]>(this.CUSTOM_PATH, []);
-    return [...defaults, ...customs];
+
+    // Create a map of categories by ID, where customs override defaults
+    const categoryMap = new Map<string, Category>();
+
+    // Add defaults first
+    defaults.forEach(cat => categoryMap.set(cat.id, cat));
+
+    // Add customs, overriding any defaults with same ID
+    customs.forEach(cat => categoryMap.set(cat.id, cat));
+
+    return Array.from(categoryMap.values());
   }
 
   static async addCustomCategory(category: Partial<Category>): Promise<Category> {
     if (!category.name) throw new AppError('Category name is required', 400);
 
-    const id = category.id || category.name.toLowerCase().replace(/\s+/g, '_');
+    const id = category.id || category.name.toLowerCase().trim().replace(/\s+/g, '_');
+
+    // Check for existing ID in both defaults and customs
+    const allCategories = await this.getAllCategories();
+    if (allCategories.some(c => c.id === id)) {
+      throw new AppError(`Category with ID '${id}' already exists`, 409);
+    }
+
     const newCategory: Category = {
       id,
       name: category.name,
@@ -46,15 +63,33 @@ export class CategoryService {
     if (!updated.id) throw new AppError('Category ID is required', 400);
 
     let result: Category | undefined;
+    const allCategories = await this.getAllCategories();
+    const existingCategory = allCategories.find(c => c.id === updated.id);
+
+    if (!existingCategory) {
+      throw new AppError('Category not found', 404);
+    }
+
+    // Merge existing with updates
+    const newCategoryState: Category = {
+      ...existingCategory,
+      ...updated
+    } as Category;
 
     await JsonStorageService.update<Category[]>(
       this.CUSTOM_PATH,
       (categories) => {
         const index = categories.findIndex(c => c.id === updated.id);
-        if (index === -1) throw new AppError('Category not found in custom categories', 404);
 
-        categories[index] = { ...categories[index], ...updated } as Category;
-        result = categories[index];
+        if (index !== -1) {
+          // Update existing custom category
+          categories[index] = newCategoryState;
+        } else {
+          // Create new custom category (shadowing a default)
+          categories.push(newCategoryState);
+        }
+
+        result = newCategoryState;
         return categories;
       },
       []

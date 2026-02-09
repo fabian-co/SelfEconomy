@@ -14,7 +14,7 @@ interface AddCategoryFormProps {
 export function AddCategoryForm({ onAdd }: AddCategoryFormProps) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("tag");
-  const [color, setColor] = useState("blue");
+  const [color, setColor] = useState("#0ea5e9");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -25,7 +25,7 @@ export function AddCategoryForm({ onAdd }: AddCategoryFormProps) {
       await onAdd(name, icon, color);
       setName("");
       setIcon("tag");
-      setColor("blue");
+      setColor("#0ea5e9");
     } finally {
       setIsSubmitting(false);
     }
