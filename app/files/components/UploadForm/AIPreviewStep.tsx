@@ -7,7 +7,7 @@ import { Loader2Icon, CheckIcon } from "lucide-react";
 import { IATablePreview } from "../IATablePreview";
 import { SharedStepProps } from "./types";
 
-import { AIChat } from "./AIChat";
+// import { AIChat } from "./AIChat";
 
 interface AIPreviewStepProps extends SharedStepProps {
   aiData: any;
@@ -90,15 +90,15 @@ export function AIPreviewStep({
           </div>
         </div>
 
-        {/* Right Column: AI Chat */}
-        <div className="w-full md:w-[280px] shrink-0 h-[450px] md:h-full">
+        {/* Right Column: AI Chat - Hidden for now */}
+        {/* <div className="w-full md:w-[280px] shrink-0 h-[450px] md:h-full">
           <AIChat
             onSendMessage={onFeedback}
             onUndo={onUndo}
             isLoading={isChatLoading}
             currentVersion={currentVersion}
           />
-        </div>
+        </div> */}
       </div>
 
       <div className="md:hidden mt-4">
