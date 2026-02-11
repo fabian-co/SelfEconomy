@@ -7,18 +7,12 @@ import { Loader2Icon, CheckIcon } from "lucide-react";
 import { IATablePreview } from "../IATablePreview";
 import { SharedStepProps } from "./types";
 
-// import { AIChat } from "./AIChat";
-
 interface AIPreviewStepProps extends SharedStepProps {
   aiData: any;
   onBack: () => void;
   onConfirm: () => void;
-  onFeedback: (message: string) => Promise<void>;
-  onUndo: (targetVersion: number) => Promise<void>;
   onUpdateTransaction: (data: any) => void;
   pendingRules: any[];
-  isChatLoading: boolean;
-  currentVersion: number;
   existingBanks: string[];
 }
 
@@ -28,12 +22,8 @@ export function AIPreviewStep({
   aiData,
   onBack,
   onConfirm,
-  onFeedback,
-  onUndo,
   onUpdateTransaction,
   pendingRules,
-  isChatLoading,
-  currentVersion,
   existingBanks
 }: AIPreviewStepProps) {
   const { setValue, watch } = form;
@@ -89,16 +79,6 @@ export function AIPreviewStep({
             />
           </div>
         </div>
-
-        {/* Right Column: AI Chat - Hidden for now */}
-        {/* <div className="w-full md:w-[280px] shrink-0 h-[450px] md:h-full">
-          <AIChat
-            onSendMessage={onFeedback}
-            onUndo={onUndo}
-            isLoading={isChatLoading}
-            currentVersion={currentVersion}
-          />
-        </div> */}
       </div>
 
       <div className="md:hidden mt-4">

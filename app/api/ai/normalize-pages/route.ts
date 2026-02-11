@@ -2,9 +2,6 @@ import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import path from 'path';
-import { TemplateService } from '../../process/services/template.service';
-import { TransactionService } from '../../process/services/transaction.service';
 import { getExistingBanks } from '../../process/lib/bank-utils';
 
 // Schema for page transactions
@@ -193,32 +190,6 @@ ${pageText.substring(0, 25000)}
           pagesProcessed: pages.length,
           usage: totalUsage
         };
-
-        // Save versioned files if sessionId provided
-        let version = 1;
-        if (sessionId) {
-          const fileExt = filePath ? path.extname(filePath).toLowerCase().replace('.', '') : 'pdf';
-
-          // Create a simple template config
-          const templateConfig = {
-            entity: finalMetadata?.entity || 'AI Extracted',
-            account_type: finalMetadata?.account_type || 'debit',
-            signature_keywords: ['AI-extracted'],
-            file_types: [fileExt],
-            extraction_method: 'llm_page_by_page'
-          };
-
-          const versionedResult = await TemplateService.saveTempTemplateVersioned(templateConfig, fileExt, sessionId);
-          version = versionedResult.version;
-
-          finalResult.template_config = {
-            ...templateConfig,
-            fileName: path.basename(versionedResult.path)
-          };
-          finalResult.version = version;
-
-          await TransactionService.saveTempProcessedDataVersioned(finalResult, sessionId, version);
-        }
 
         // Send complete result
         send({

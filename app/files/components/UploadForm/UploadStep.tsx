@@ -2,9 +2,7 @@ import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { UploadIcon, XIcon, SearchIcon, Loader2Icon } from "lucide-react";
-import { TemplateLibrary } from "./TemplateLibrary";
-import { TemplateBanner } from "./TemplateBanner";
-import { SharedStepProps, Template } from "./types";
+import { SharedStepProps } from "./types";
 
 interface UploadStepProps extends SharedStepProps {
   isPDF: boolean;
@@ -12,14 +10,7 @@ interface UploadStepProps extends SharedStepProps {
   setPasswordError: (err: string | null) => void;
   useAi: boolean;
   setUseAi: (use: boolean) => void;
-  availableTemplates: Template[];
-  fetchTemplates: () => void;
-  clearTemplates: () => void;
-  detectedTemplate: Template | null;
-  setDetectedTemplate: (t: Template | null) => void;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  handleUseTemplate: () => void;
-  handleSkipTemplate: () => void;
   handleCancel: () => void;
   onSubmit: () => void;
   isAiProcessing: boolean;
@@ -36,14 +27,7 @@ export function UploadStep({
   setPasswordError,
   useAi,
   setUseAi,
-  availableTemplates,
-  fetchTemplates,
-  clearTemplates,
-  detectedTemplate,
-  setDetectedTemplate,
   handleFileChange,
-  handleUseTemplate,
-  handleSkipTemplate,
   handleCancel,
   onSubmit,
   isAiProcessing,
@@ -158,24 +142,15 @@ export function UploadStep({
           </div>
 
           <div className="mt-4 flex flex-col gap-2">
-            {detectedTemplate ? (
-              <TemplateBanner
-                detectedTemplate={detectedTemplate}
-                isAiProcessing={isAiProcessing}
-                onUseTemplate={handleUseTemplate}
-                onSkipTemplate={handleSkipTemplate}
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={onSubmit}
-                disabled={!isValid}
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:shadow-none text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
-              >
-                <SearchIcon className="h-5 w-5" />
-                Analizar con IA
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={onSubmit}
+              disabled={!isValid}
+              className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-zinc-200 disabled:text-zinc-400 disabled:shadow-none text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+            >
+              <SearchIcon className="h-5 w-5" />
+              Analizar con IA
+            </button>
           </div>
         </>
       )}
