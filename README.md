@@ -69,6 +69,13 @@ Actualmente, el proceso depende 100% de la IA para cada lectura, lo cual es efec
 
 Espero que este proyecto pueda ayudar a cualquier persona interesada en mejorar sus finanzas personales. Si deseas contribuir, ¡eres bienvenido! Es una herramienta fácil de implementar que busca aportar un grano de arena al bienestar financiero de todos.
 
+## Requisitos Previos
+
+Antes de comenzar, asegúrate de tener instalados:
+
+- **Node.js**: Versión 18 o superior.
+- **Python**: Versión 3.10 o superior (necesario para el procesamiento de archivos).
+
 ## Desarrollo Local
 
 Primero, ejecuta el servidor de desarrollo:
