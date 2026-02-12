@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { MonthNavigation } from "./MonthNavigation";
 import { TransactionItem } from "./TransactionItem";
 import { GroupedTransaction } from "../types/index";
-import { PlusCircle, Tag, ChevronDown, ChevronRight, Search, Edit, Sparkles } from "lucide-react";
+import { PlusCircle, Tag, ChevronDown, ChevronRight, Search, Edit, Sparkles, FolderIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryManager } from "./category-manager/CategoryManager";
 import { useRouter } from "next/navigation";
@@ -62,6 +62,29 @@ export function TransactionList({
   useEffect(() => {
     fetchCategories();
   }, []);
+
+  if (allTransactions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-white dark:bg-zinc-900 rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 min-h-[400px]">
+        <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-full mb-4">
+          <FolderIcon className="w-8 h-8 text-zinc-400" />
+        </div>
+        <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+          No hay transacciones procesadas
+        </h3>
+        <p className="text-zinc-500 dark:text-zinc-400 max-w-sm mb-6">
+          Da clic en el icono de la carpeta para subir los primeros extractos a procesar
+        </p>
+        <Button
+          onClick={() => router.push('/files')}
+          className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 cursor-pointer"
+        >
+          <FolderIcon className="w-4 h-4 mr-2" />
+          Ir a Archivos
+        </Button>
+      </div>
+    );
+  }
 
   const categorizedGroups = useMemo(() => {
     if (!currentGroup) return [];
